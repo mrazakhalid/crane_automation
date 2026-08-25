@@ -1,0 +1,9 @@
+cd frontend
+npm i
+npm run dev
+
+# new terminal
+cd backend
+npm i
+cp .env.example .env
+npm run dev

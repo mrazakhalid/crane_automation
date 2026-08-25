@@ -1,0 +1,74 @@
+LINE 4 — CRANE DRIVE SEQUENCE (TIA watch table)
+Modify each value (Modify > Modify now). Watch "sts_state" advance after each step.
+Recipe used: 1-1A=6 ; 1-1B=3 ; 1-2=5   (stations: 1-1A=2, 1-1B=3, 1-2=4)
+
+*** AUTO MODE: add the PlantSim block (docs/line4/sim-plant-auto-move.md) and the crane
+*** moves by itself — then the ONLY manual step is btn_start (step 4 below). The rest of
+*** this switch-by-switch list is the MANUAL fallback (no PlantSim).
+
+--- 0. RESET (start parked & raised) ---
+ls_at[0]  = TRUE     # crane is at Parking (station 0)
+ls_at[1]  = FALSE
+ls_at[2]  = FALSE
+ls_at[3]  = FALSE
+ls_at[4]  = FALSE
+ls_up     = TRUE     # hoist fully raised
+ls_dip    = FALSE
+btn_start = FALSE
+                     # sts_state should read 0 (IDLE)
+
+--- 1. SEND FROM APP ---
+(In the app: pick line4, recipe 1-1A=6;1-1B=3;1-2=5, Generate, Send to PLC)
+                     # cmd_send -> TRUE, task_count -> 3, sts_state -> 10, sts_busy -> TRUE
+
+--- 2. GO TO LOADING (sts_state 10) ---
+ls_at[0]  = FALSE
+ls_at[1]  = TRUE     # arrived at Loading (station 1)  -> sts_state 20
+
+--- 3. LOWER AT LOADING (sts_state 20) ---
+ls_up     = FALSE
+ls_dip    = TRUE     # hoist down in loading           -> sts_state 30
+
+--- 4. HOLD START BUTTON (sts_state 30) ---
+btn_start = TRUE     # HOLD for at least 3 seconds     -> sts_state 40
+
+--- 5. LIFT (sts_state 40) ---
+ls_dip    = FALSE
+ls_up     = TRUE     # hoist raised                    -> sts_state 50
+btn_start = FALSE    # release the button
+
+--- 6. TASK 1 -> tank 1-1A (station 2) ---
+ls_at[1]  = FALSE
+ls_at[2]  = TRUE     # arrived at 1-1A                 -> sts_state 60
+ls_up     = FALSE
+ls_dip    = TRUE     # dip into tank                   -> sts_state 70 (dwell ~6 s, just wait)
+ls_dip    = FALSE
+ls_up     = TRUE     # lift out                        -> sts_state 50, sts_step -> 2
+
+--- 7. TASK 2 -> tank 1-1B (station 3) ---
+ls_at[2]  = FALSE
+ls_at[3]  = TRUE     # arrived at 1-1B                 -> sts_state 60
+ls_up     = FALSE
+ls_dip    = TRUE     # dip                             -> sts_state 70 (dwell ~3 s)
+ls_dip    = FALSE
+ls_up     = TRUE     # lift                            -> sts_state 50, sts_step -> 3
+
+--- 8. TASK 3 -> tank 1-2 (station 4) ---
+ls_at[3]  = FALSE
+ls_at[4]  = TRUE     # arrived at 1-2                  -> sts_state 60
+ls_up     = FALSE
+ls_dip    = TRUE     # dip                             -> sts_state 70 (dwell ~5 s)
+ls_dip    = FALSE
+ls_up     = TRUE     # lift, last task done            -> sts_state 85
+
+--- 9. RETURN TO PARKING (sts_state 85) ---
+ls_at[4]  = FALSE
+ls_at[0]  = TRUE     # back home at Parking            -> sts_state 90 (DONE)
+                     # sts_done -> TRUE, sts_busy -> FALSE
+                     # App shows "Tasks done", clears cmd_send, sts_state -> 0
+
+NOTES:
+- Only ONE ls_at[..] should be TRUE at a time (set the old one FALSE as you set the new one).
+- btn_start must stay TRUE the full 3 s in step 4 (a quick pulse won't work).
+- The dwell (sts_state 70) runs on the PLC timer using tasks[i].dwell_s — just wait, don't touch.
+- If ls_dip / ls_up are left TRUE, the lower/lift steps pass instantly (only the dwell waits).

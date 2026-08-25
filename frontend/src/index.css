@@ -1,0 +1,1251 @@
+@import 'tailwindcss';
+
+/* Crane Automation — industrial control-room theme, powered by Tailwind v4.
+   Design tokens live in @theme (so they also generate utilities like bg-panel,
+   text-muted, rounded-card); reusable UI primitives are composed with @apply. */
+
+@theme {
+  --color-bg: #0b0f14;
+  --color-bg2: #0f151c;
+  --color-panel: #141b24;
+  --color-panel2: #1a222d;
+  --color-border: #26313f;
+  --color-border-strong: #33414f;
+  --color-ink: #e6edf3;
+  --color-muted: #8595a7;
+  --color-amber: #f5b23d;
+  --color-amber-ink: #1a1204;
+  --color-danger: #ef5350;
+
+  --radius-field: 8px;
+  --radius-card: 12px;
+
+  --shadow-panel: 0 10px 30px rgb(0 0 0 / 0.45);
+
+  --font-sans: 'Segoe UI', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+}
+
+/* Dark is the default theme (its color tokens live in @theme above). These extra
+   runtime variables — role accents + the text color used on top of an accent —
+   are kept out of @theme because they're only referenced by custom CSS. */
+:root {
+  --role-super_admin: #f5b23d;
+  --role-manager: #4aa3ff;
+  --role-operator: #35c98a;
+  --color-on-role: #0b0f14;
+}
+
+/* Light theme — overrides the color tokens (higher specificity than :root wins).
+   Toggled by <html data-theme="light"> (see ThemeProvider + index.html script). */
+:root[data-theme='light'] {
+  --color-bg: #eceff3;
+  --color-bg2: #ffffff;
+  --color-panel: #ffffff;
+  --color-panel2: #eef1f5;
+  --color-border: #dbe1e8;
+  --color-border-strong: #c4ccd6;
+  --color-ink: #1b2431;
+  --color-muted: #5a6472;
+  --color-amber: #b7791f;
+  --color-danger: #d33a35;
+  --shadow-panel: 0 10px 30px rgb(15 23 42 / 0.12);
+  --role-super_admin: #b7791f;
+  --role-manager: #2563eb;
+  --role-operator: #0f9a63;
+  --color-on-role: #ffffff;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply m-0 font-sans text-ink antialiased;
+    background:
+      radial-gradient(1100px 600px at 100% -10%, rgb(245 178 61 / 0.06), transparent 60%),
+      var(--color-bg);
+  }
+
+  code {
+    @apply font-mono;
+  }
+}
+
+@layer components {
+  .muted {
+    @apply text-muted;
+  }
+  em.muted {
+    @apply text-[0.85em] not-italic;
+  }
+
+  /* ---------- Buttons + fields ---------- */
+  .btn {
+    @apply inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-field
+      border border-border-strong bg-panel2 px-4 font-semibold text-ink transition
+      hover:border-amber active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn--primary {
+    @apply border-amber bg-amber text-amber-ink hover:brightness-105;
+  }
+  .btn--sm {
+    @apply min-h-8 px-3 text-sm;
+  }
+  .btn--danger {
+    @apply border hover:border-danger;
+    color: var(--color-danger);
+    border-color: color-mix(in oklab, var(--color-danger) 40%, transparent);
+    background: color-mix(in oklab, var(--color-danger) 12%, transparent);
+  }
+
+  .field {
+    @apply mb-4 flex flex-col gap-1.5;
+  }
+  .field > span {
+    @apply text-sm font-semibold text-muted;
+  }
+  .field input,
+  .field select {
+    @apply min-h-11 rounded-field border border-border bg-bg2 px-3.5 text-ink outline-none
+      transition focus:border-amber;
+  }
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus {
+    box-shadow: 0 0 0 3px rgb(245 178 61 / 0.15);
+  }
+  .field textarea {
+    @apply rounded-field border border-border bg-bg2 px-3.5 py-2.5 text-ink outline-none
+      transition focus:border-amber;
+    min-height: 96px;
+    resize: vertical;
+    font: inherit;
+    line-height: 1.5;
+  }
+
+  /* ---------- QR scanner ---------- */
+  .qr__actions {
+    @apply flex flex-wrap gap-2;
+  }
+  .qr__preview {
+    @apply mt-3 block w-full rounded-field border border-border;
+    max-height: 220px;
+    object-fit: contain;
+  }
+  .qr__output {
+    @apply mt-3;
+  }
+  .qr-loading {
+    @apply grid place-items-center;
+  }
+
+  /* ---------- Page-options nav bar ---------- */
+  .page-tabs {
+    @apply flex flex-none items-center gap-1 overflow-x-auto border-b border-border bg-bg2;
+    padding: 0.55rem clamp(0.75rem, 3vw, 1.75rem);
+  }
+  .pagetab {
+    @apply cursor-pointer rounded-md border-0 bg-transparent px-4 py-2 font-semibold
+      whitespace-nowrap text-muted transition hover:text-ink;
+  }
+  .pagetab--active {
+    @apply bg-panel2 text-ink;
+  }
+  .pagetab .count {
+    @apply ml-2 rounded-full bg-border-strong px-1.5 py-0.5 text-[0.7rem] text-ink;
+  }
+  .form-error {
+    @apply mb-4 rounded-field border px-3 py-2 text-sm;
+    color: var(--color-danger);
+    border-color: color-mix(in oklab, var(--color-danger) 35%, transparent);
+    background: color-mix(in oklab, var(--color-danger) 12%, transparent);
+  }
+
+  /* ---------- Login ---------- */
+  .login {
+    @apply grid min-h-full place-items-center p-6;
+  }
+  .login__card {
+    @apply w-[min(410px,100%)] rounded-card border border-border p-8 shadow-panel;
+    background: linear-gradient(180deg, var(--color-panel), var(--color-bg2));
+  }
+  .login__brand {
+    @apply mb-6 flex items-center gap-3.5;
+  }
+  .login__brand h1 {
+    @apply m-0 text-xl;
+  }
+  .login__brand p {
+    @apply mt-0.5 mb-0 text-sm;
+  }
+  .login__mark,
+  .sidebar__logo {
+    @apply text-amber;
+    font-size: 1.9rem;
+    line-height: 1;
+  }
+  .login__hint {
+    @apply mx-0 mt-4 mb-0 text-center text-xs;
+  }
+  .login__hint code {
+    @apply text-amber;
+  }
+
+  /* ---------- App shell ---------- */
+  .app-shell {
+    @apply grid min-h-full;
+    grid-template-columns: 248px 1fr;
+    transition: grid-template-columns 0.18s ease;
+  }
+  .app-shell--collapsed {
+    grid-template-columns: 72px 1fr;
+  }
+
+  .sidebar {
+    @apply sticky top-0 flex h-screen flex-col gap-2 border-r border-border bg-bg2 px-2.5 py-3.5;
+  }
+  .sidebar__top {
+    @apply flex items-center gap-2.5 px-2 pt-1.5 pb-3;
+  }
+  .sidebar__title {
+    @apply flex-1 font-bold tracking-wide;
+  }
+  .sidebar__toggle {
+    @apply ml-auto inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-[7px]
+      border border-border bg-panel text-muted;
+  }
+  .sidebar--collapsed .sidebar__top {
+    @apply justify-center;
+  }
+  .sidebar__nav {
+    @apply flex flex-col gap-1;
+  }
+  .sidebar__foot {
+    @apply mt-auto flex flex-col gap-2;
+  }
+
+  .navitem {
+    @apply flex w-full cursor-pointer items-center gap-3 rounded-field border border-transparent
+      bg-transparent px-2.5 py-2.5 text-left font-semibold text-muted no-underline transition
+      hover:bg-panel hover:text-ink;
+  }
+  .navitem--active {
+    @apply border-border-strong bg-panel2 text-ink;
+  }
+  .navitem--active .navitem__icon {
+    @apply text-amber;
+  }
+  .navitem__icon {
+    @apply flex-none;
+  }
+  .navitem--logout:hover {
+    color: var(--color-danger);
+  }
+  .sidebar--collapsed .navitem {
+    @apply justify-center;
+  }
+
+  .whoami {
+    @apply flex items-center gap-2.5 p-2;
+  }
+  .sidebar--collapsed .whoami {
+    @apply justify-center;
+  }
+  .whoami__meta {
+    @apply flex min-w-0 flex-col gap-1;
+  }
+  .whoami__name {
+    @apply overflow-hidden font-semibold text-ellipsis whitespace-nowrap;
+  }
+
+  .avatar {
+    @apply grid h-[34px] w-[34px] flex-none place-items-center rounded-[9px] font-bold;
+    color: var(--color-on-role);
+    background: var(--color-muted);
+  }
+  .avatar--super_admin {
+    background: var(--role-super_admin);
+  }
+  .avatar--manager {
+    background: var(--role-manager);
+  }
+  .avatar--operator {
+    background: var(--role-operator);
+  }
+
+  .badge {
+    @apply inline-flex w-fit items-center rounded-full border border-current px-2 py-0.5
+      text-[0.72rem] font-bold tracking-wide;
+  }
+  .badge--super_admin {
+    color: var(--role-super_admin);
+  }
+  .badge--manager {
+    color: var(--role-manager);
+  }
+  .badge--operator {
+    color: var(--role-operator);
+  }
+
+  /* ---------- Workspace + page layout ----------
+     The workspace is a full-height column. Each page = an optional top nav bar
+     (.page-tabs) + a scrollable body whose single .page-body__inner is centered
+     both axes (margin:auto) in the free space. */
+  .workspace {
+    @apply flex h-screen flex-col overflow-hidden;
+  }
+  .page {
+    @apply flex h-full min-h-0 flex-col;
+  }
+  .page-body {
+    @apply flex min-h-0 flex-1 overflow-y-auto;
+    padding: clamp(1.25rem, 4vw, 2.5rem);
+  }
+  .page-body__inner {
+    @apply m-auto w-full;
+    max-width: 560px;
+  }
+  .page-center {
+    @apply grid min-h-screen place-items-center;
+  }
+  .eyebrow {
+    @apply mt-0 mb-1.5 font-bold text-amber uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+  }
+  .page-title {
+    @apply mt-0 mb-1.5 text-2xl;
+  }
+  .page-head {
+    @apply flex flex-wrap items-center justify-between gap-4;
+  }
+  .page-head__actions {
+    @apply flex flex-wrap gap-2.5;
+  }
+
+  .role-hero {
+    @apply my-1.5 font-extrabold;
+    font-size: clamp(2.6rem, 8vw, 5rem);
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    background: linear-gradient(180deg, var(--color-ink), var(--role-operator));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+  .role-hero--super_admin {
+    background-image: linear-gradient(180deg, var(--color-ink), var(--role-super_admin));
+    background-clip: text;
+    -webkit-background-clip: text;
+  }
+  .role-hero--manager {
+    background-image: linear-gradient(180deg, var(--color-ink), var(--role-manager));
+    background-clip: text;
+    -webkit-background-clip: text;
+  }
+  .dashboard__sub {
+    @apply max-w-[46ch];
+  }
+  .placeholder-grid {
+    @apply mt-8 grid gap-4;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+  .placeholder-card {
+    @apply h-[130px] rounded-card border border-dashed border-border-strong;
+    background: linear-gradient(180deg, var(--color-panel), transparent);
+  }
+
+  .card {
+    @apply rounded-card border border-border bg-panel p-6;
+  }
+  .form {
+    @apply mx-auto w-full max-w-[460px];
+  }
+  .form__title {
+    @apply mt-0 mb-1 flex items-center gap-2 text-xl;
+  }
+  .form__title svg {
+    color: var(--color-amber);
+  }
+  .form__sub {
+    @apply mt-0 mb-4 text-sm;
+  }
+
+  /* ---------- PLC / OPC UA ---------- */
+  /* PLC page: a stacked "Connection" section, then a two-column live I/O grid. */
+  .plc-layout {
+    @apply mt-6 flex flex-col gap-4;
+  }
+  /* Cards inside the PLC layout fill their column (override .form centering). */
+  .plc-layout .form {
+    @apply mx-0 max-w-none;
+  }
+  .plc-io {
+    @apply grid items-start gap-4;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 768px) {
+    .plc-io {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .plc-empty {
+    @apply rounded-card border border-dashed border-border px-6 py-8 text-center text-sm;
+  }
+  .plc-connect__head {
+    @apply mb-3 flex flex-wrap items-center justify-between gap-2;
+  }
+  .plc-section__label {
+    @apply text-xs font-semibold uppercase text-amber;
+    letter-spacing: 0.1em;
+  }
+  .plc-connect__endpoint {
+    @apply -mt-1 mb-3 font-mono text-sm break-all;
+  }
+  .plc-chip {
+    @apply rounded-full border border-border bg-bg2 px-2 py-0.5 font-mono text-xs;
+  }
+  /* Two selects side by side (Security + Policy); stacks on very narrow screens. */
+  .field-row {
+    @apply flex flex-wrap gap-3;
+  }
+  .field-row > .field {
+    @apply mb-4 min-w-[8rem] flex-1;
+  }
+
+  /* ---------- PLC Manager (super-admin config) ---------- */
+  .form-row {
+    @apply flex flex-wrap gap-3;
+  }
+  .form-row > .field {
+    @apply min-w-[8rem] flex-1;
+  }
+  .plc-manager {
+    @apply flex flex-col gap-4;
+  }
+  .conn-list {
+    @apply m-0 flex list-none flex-col gap-2 p-0;
+  }
+  .conn-card {
+    @apply flex flex-wrap items-center justify-between gap-2 rounded-card border border-border
+      bg-panel p-3;
+  }
+  .conn-card--selected {
+    @apply border-amber;
+  }
+  .conn-card__main {
+    @apply flex min-w-[12rem] flex-1 cursor-pointer flex-col items-start gap-0.5 border-0
+      bg-transparent p-0 text-left;
+  }
+  .conn-card__head {
+    @apply flex items-center gap-2;
+  }
+  .conn-card__name {
+    @apply font-semibold text-ink;
+  }
+  .conn-card__endpoint {
+    @apply font-mono text-xs break-all;
+  }
+  .conn-card__sec {
+    @apply text-xs;
+  }
+  .conn-card__actions {
+    @apply flex shrink-0 items-center gap-1.5;
+  }
+  .conn-card__meta {
+    @apply flex flex-wrap items-center gap-1.5 text-xs;
+  }
+  .crane-tags {
+    @apply inline-flex flex-wrap gap-1;
+  }
+  .crane-tag {
+    @apply rounded border border-border bg-bg px-1.5 py-0.5 font-mono text-[0.7rem] text-ink;
+  }
+  /* Live per-PLC connection status pill. */
+  .status-chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5
+      text-[0.7rem] text-muted;
+  }
+  .status-chip__dot {
+    @apply inline-block h-2 w-2 rounded-full bg-muted;
+  }
+  .status-chip--connected {
+    @apply text-ink;
+  }
+  .status-chip--connected .status-chip__dot {
+    background: #16a34a;
+  }
+  .status-chip--connecting .status-chip__dot {
+    @apply bg-amber;
+  }
+  .status-chip--error {
+    @apply border-danger text-danger;
+  }
+  .status-chip--error .status-chip__dot {
+    @apply bg-danger;
+  }
+  /* Crane multi-select in the connection form. */
+  .crane-picker {
+    @apply rounded-card border border-border p-3;
+  }
+  .crane-picker__chips {
+    @apply flex flex-wrap gap-1.5;
+  }
+  .crane-picker__hint {
+    @apply mt-2 text-xs;
+  }
+  .chip {
+    @apply cursor-pointer rounded-full border border-border bg-panel px-2.5 py-1 text-sm text-ink;
+  }
+  .chip--on {
+    @apply border-amber bg-amber text-amber-ink;
+  }
+  .badge svg {
+    @apply mr-0.5 inline-block align-[-1px];
+  }
+  .icon-btn--danger {
+    @apply hover:border-danger hover:text-danger;
+  }
+  .tags-panel {
+    @apply mt-1;
+  }
+  .tags-grid {
+    @apply grid items-start gap-4;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 768px) {
+    .tags-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .tag-col__title {
+    @apply mt-0 mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-muted;
+    letter-spacing: 0.06em;
+  }
+  .tag-list {
+    @apply m-0 flex list-none flex-col gap-1.5 p-0;
+  }
+  .tag-row {
+    @apply flex items-center gap-2 rounded-field border border-border bg-bg2 px-2 py-1.5;
+  }
+  .tag-row__label {
+    @apply font-semibold;
+  }
+  .tag-row__node {
+    @apply flex-1 font-mono text-xs break-all text-muted;
+  }
+  .tag-form {
+    @apply mt-4 border-t border-border pt-4;
+  }
+
+  .plc-hint {
+    @apply mb-4 flex items-start gap-2 rounded-field border border-border bg-bg2 p-3 text-xs;
+  }
+  .plc-hint svg {
+    @apply mt-0.5 shrink-0;
+    color: var(--color-amber);
+  }
+  .plc-status {
+    @apply flex flex-wrap items-center gap-2 text-sm;
+  }
+  /* Live watch table: many NodeIds polled together. */
+  .plc-watch {
+    @apply mt-1 overflow-x-auto;
+  }
+  .plc-watch__table {
+    @apply w-full border-collapse text-sm;
+  }
+  .plc-watch__table th {
+    @apply border-b border-border pb-2 pr-3 text-left text-xs font-semibold uppercase text-muted;
+    letter-spacing: 0.06em;
+  }
+  .plc-watch__table td {
+    @apply border-b border-border py-2 pr-3 align-middle;
+  }
+  .plc-watch__label {
+    @apply font-semibold;
+  }
+  .plc-watch__node {
+    @apply font-mono text-xs text-muted;
+    word-break: break-all;
+  }
+  .plc-watch__value {
+    @apply font-mono text-lg font-bold text-amber;
+    word-break: break-all;
+  }
+  .plc-watch__meta {
+    @apply font-mono text-xs;
+  }
+  .plc-watch__add {
+    @apply mt-3 flex flex-wrap gap-2;
+  }
+  .plc-watch__add input {
+    @apply min-h-10 min-w-[7rem] flex-1 rounded-field border border-border bg-bg2 px-3 text-ink
+      outline-none transition focus:border-amber;
+  }
+  .icon-btn {
+    @apply inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-field
+      border border-border text-muted transition hover:border-danger hover:text-danger;
+  }
+  .plc-status__dot {
+    @apply inline-block h-2.5 w-2.5 shrink-0 rounded-full;
+    background: var(--color-muted);
+  }
+  .plc-status__dot--connected {
+    background: var(--role-operator);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--role-operator) 25%, transparent);
+  }
+  .plc-status__dot--connecting {
+    background: var(--color-amber);
+  }
+  .plc-status__dot--error {
+    background: var(--color-danger);
+  }
+  .plc-readout {
+    @apply mt-1 rounded-field border border-border bg-bg2 p-4;
+  }
+  .plc-readout__value {
+    @apply font-mono text-3xl font-bold text-amber;
+    word-break: break-all;
+  }
+  .plc-readout__meta {
+    @apply mt-3 grid grid-cols-3 gap-2 text-xs;
+  }
+  .plc-readout__meta dt {
+    @apply text-muted uppercase;
+    letter-spacing: 0.08em;
+  }
+  .plc-readout__meta dd {
+    @apply mt-0.5 font-mono;
+    margin-inline-start: 0;
+  }
+
+  /* ---------- User list ---------- */
+  .user-list {
+    @apply flex w-full flex-col gap-2.5;
+  }
+  .user-row__note {
+    @apply text-sm;
+  }
+  .user-row {
+    @apply flex items-center gap-3 rounded-field border border-border bg-panel px-3.5 py-2.5;
+  }
+  .user-row__name {
+    @apply font-semibold;
+  }
+  .user-row__spacer {
+    @apply flex-1;
+  }
+  .empty {
+    @apply p-8 text-center;
+  }
+  .skeleton {
+    @apply relative h-14 overflow-hidden;
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--color-ink) 8%, transparent),
+      transparent
+    );
+    animation: shimmer 1.2s infinite;
+  }
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop {
+    @apply fixed inset-0 z-50 grid place-items-center p-4;
+    background: rgb(0 0 0 / 0.6);
+  }
+  .modal {
+    @apply flex max-h-[90vh] w-[min(440px,100%)] flex-col overflow-hidden rounded-card
+      border border-border-strong bg-panel shadow-panel;
+  }
+  .modal__head {
+    @apply flex flex-none items-center justify-between border-b border-border px-6 pt-5 pb-3;
+  }
+  .modal__body {
+    @apply overflow-y-auto px-6 pt-4 pb-6;
+  }
+  .modal__head h2 {
+    @apply m-0 text-lg;
+  }
+  .icon-btn {
+    @apply inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border
+      border-border bg-panel2 text-muted;
+  }
+  .modal__actions {
+    @apply sticky bottom-0 -mx-6 mt-4 flex justify-end gap-2.5 border-t border-border
+      bg-panel px-6 pt-3 pb-1;
+  }
+  .cred-readout {
+    @apply my-4 grid gap-x-4 gap-y-2;
+    grid-template-columns: auto 1fr;
+  }
+  .cred-readout dt {
+    @apply self-center text-sm text-muted;
+  }
+  .cred-readout dd {
+    @apply m-0;
+  }
+  .cred-readout code {
+    @apply inline-block rounded-md border border-border bg-bg2 px-2.5 py-1.5;
+  }
+
+  /* ---------- Toasts ---------- */
+  .toast-stack {
+    @apply fixed right-4 bottom-4 z-[100] flex flex-col gap-2;
+  }
+  .toast {
+    @apply max-w-[320px] cursor-pointer rounded-field border border-border-strong bg-panel2
+      px-4 py-2.5 text-left text-ink shadow-panel;
+    animation: toast-in 0.16s ease;
+  }
+  .toast--success {
+    border-color: var(--role-operator);
+  }
+  .toast--error {
+    @apply border-danger;
+  }
+  .toast--info {
+    border-color: var(--role-manager);
+  }
+
+  /* ---------- Spinner ---------- */
+  .spinner {
+    @apply inline-block rounded-full;
+    border: 2px solid color-mix(in oklab, currentColor 25%, transparent);
+    border-top-color: currentColor;
+    animation: spin 0.7s linear infinite;
+  }
+
+  /* ---------- Lines (super-admin) ---------- */
+  .page-body__inner--wide {
+    max-width: 920px;
+  }
+  .line-list {
+    @apply flex w-full flex-col gap-4;
+  }
+  .line-skeleton {
+    @apply h-40;
+  }
+  .create-line {
+    @apply flex flex-col gap-4;
+  }
+  .line-card__head {
+    @apply flex flex-wrap items-center justify-between gap-2;
+  }
+  .line-card__title {
+    @apply m-0 flex-1;
+  }
+  /* The header title doubles as the expand/collapse toggle. */
+  .line-card__toggle {
+    @apply flex w-full cursor-pointer items-center gap-2 border-0 bg-transparent p-0 text-left;
+  }
+  .line-card__toggle svg {
+    @apply shrink-0;
+  }
+  .line-card__icon {
+    color: var(--color-amber);
+  }
+  .line-card__name {
+    @apply text-lg font-semibold text-ink;
+  }
+  .line-card__meta {
+    @apply text-sm;
+  }
+  /* Grid of crane columns; top margin gives breathing room when expanded. */
+  .line-card__cranes {
+    @apply mt-3 grid gap-3;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+  .crane-col {
+    @apply rounded-field border border-border bg-bg2 p-3;
+  }
+  .crane-col__name {
+    @apply m-0 mb-2 text-sm font-bold text-amber uppercase tracking-wide;
+  }
+  .crane-col__tanks {
+    @apply m-0 flex list-none flex-col gap-1.5 p-0;
+  }
+  .tank-chip {
+    @apply flex items-center gap-2 rounded-md border border-border bg-panel px-2 py-1.5 text-sm;
+  }
+  .tank-chip__num {
+    @apply grid h-5 w-5 flex-none place-items-center rounded bg-panel2 text-[0.7rem] font-bold text-muted;
+  }
+  .tank-chip__name {
+    @apply font-semibold;
+  }
+  .tank-chip__xfer {
+    @apply ml-auto flex-none text-amber;
+  }
+
+  /* ---------- Task generator (manager) ---------- */
+  .task-gen {
+    @apply flex w-full flex-col gap-4 text-left;
+  }
+  .task-list__head {
+    @apply mb-3 flex flex-wrap items-baseline justify-between gap-2;
+  }
+  .task-table__scroll {
+    @apply overflow-x-auto;
+  }
+  .task-table {
+    @apply w-full border-collapse text-sm;
+  }
+  .task-table th,
+  .task-table td {
+    @apply border-b border-border px-2.5 py-2 text-left whitespace-nowrap;
+  }
+  .task-table th {
+    @apply text-xs font-bold text-muted uppercase tracking-wide;
+  }
+  .task-table tbody tr:hover {
+    @apply bg-panel2;
+  }
+  .tag {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold;
+  }
+  .tag--missing {
+    color: var(--color-danger);
+    background: color-mix(in oklab, var(--color-danger) 14%, transparent);
+  }
+
+  /* ---------- Process page (recipe → divide → run) ---------- */
+  .process-page {
+    @apply flex w-full flex-col gap-4 text-left;
+  }
+  .process-input__del {
+    @apply flex-none self-end;
+  }
+  .process-input__foot {
+    @apply items-end;
+  }
+  .process-input__name {
+    @apply flex-1;
+  }
+  .process-input__divide {
+    @apply ml-auto;
+  }
+
+  .process-warnings {
+    @apply flex flex-col gap-3;
+  }
+  .warn {
+    @apply border-l-4;
+    border-left-color: var(--color-amber);
+  }
+  .warn--danger {
+    border-left-color: var(--color-danger);
+  }
+  .warn__title {
+    @apply mb-2 flex items-center gap-2 text-base font-bold;
+  }
+  .warn__list {
+    @apply m-0 flex list-none flex-col gap-2 p-0;
+  }
+  .warn__pick {
+    @apply flex flex-wrap items-center justify-between gap-2;
+  }
+  .warn__pick select {
+    @apply min-h-9 rounded-field border border-border-strong bg-panel2 px-2 text-ink;
+  }
+
+  .process-summary {
+    @apply flex flex-col gap-4;
+  }
+  .process-banner {
+    @apply flex flex-wrap items-center justify-between gap-3;
+  }
+  .process-banner__counts {
+    @apply flex flex-wrap items-center gap-2;
+  }
+  .chip {
+    @apply inline-flex items-center rounded-full border border-border-strong bg-panel2
+      px-2.5 py-0.5 text-xs font-bold text-muted;
+  }
+  .chip--ok {
+    color: var(--role-operator);
+    border-color: color-mix(in oklab, var(--role-operator) 40%, transparent);
+  }
+  .chip--warn {
+    color: var(--color-amber);
+    border-color: color-mix(in oklab, var(--color-amber) 45%, transparent);
+  }
+  .chip--bad {
+    color: var(--color-danger);
+    border-color: color-mix(in oklab, var(--color-danger) 45%, transparent);
+  }
+
+  .progress {
+    @apply relative h-6 w-full overflow-hidden rounded-full bg-panel2;
+  }
+  .progress__bar {
+    @apply h-full rounded-full bg-amber transition-all duration-500;
+  }
+  .progress__label {
+    @apply absolute inset-0 grid place-items-center text-xs font-bold text-ink;
+  }
+
+  .plc-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  }
+  .plc-card__head {
+    @apply mb-3 flex items-center gap-2 border-b border-border pb-2;
+  }
+  .plc-card__name {
+    @apply font-bold;
+  }
+  .plc-card__line {
+    @apply ml-auto text-sm;
+  }
+  .chain {
+    @apply mb-3 last:mb-0;
+  }
+  .chain__crane {
+    @apply mb-1.5 text-xs font-bold text-muted uppercase tracking-wide;
+  }
+  .chain__tasks {
+    @apply m-0 flex list-none flex-col gap-1 p-0;
+  }
+  .chain__task {
+    @apply flex items-center gap-2 rounded-field border border-border bg-panel2 px-2.5 py-1.5 text-sm;
+  }
+  .chain__task--in_progress {
+    border-color: color-mix(in oklab, var(--color-amber) 55%, transparent);
+    background: color-mix(in oklab, var(--color-amber) 12%, transparent);
+  }
+  .chain__task--done {
+    @apply opacity-70;
+  }
+  .chain__tank {
+    @apply font-semibold;
+  }
+  .chain__meta {
+    @apply ml-auto text-xs;
+  }
+  .tstate {
+    @apply flex-none;
+  }
+  .tstate--idle {
+    @apply text-muted;
+  }
+  .tstate--run {
+    @apply animate-spin;
+    color: var(--color-amber);
+  }
+  .tstate--done {
+    color: var(--role-operator);
+  }
+
+  /* ---------- Line builder / editor ---------- */
+  .line-card__actions {
+    @apply ml-auto flex flex-none gap-2;
+  }
+  .line-form {
+    @apply flex flex-col gap-4;
+  }
+  .crane-input {
+    @apply flex flex-wrap items-center gap-2;
+  }
+  .crane-input input {
+    @apply max-w-[10rem];
+  }
+  .crane-chips {
+    @apply mt-2 flex flex-wrap gap-2;
+  }
+  .crane-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border-strong bg-panel2
+      px-2.5 py-1 text-sm font-semibold;
+  }
+  .crane-chip button {
+    @apply grid h-4 w-4 place-items-center rounded-full text-muted hover:text-ink;
+  }
+
+  .tanks-editor {
+    @apply flex flex-col gap-2;
+  }
+  .tanks-editor__head {
+    @apply flex items-center justify-between text-sm font-semibold text-muted;
+  }
+  .tanks-editor__rows {
+    @apply m-0 flex list-none flex-col gap-2 p-0;
+  }
+  .tank-row {
+    @apply flex flex-wrap items-center gap-2 rounded-field border border-border bg-bg2 p-2;
+  }
+  .tank-row__num {
+    @apply grid h-7 w-7 flex-none place-items-center rounded bg-panel2 text-xs font-bold text-muted;
+  }
+  .tank-row__name {
+    @apply min-w-[8rem] flex-1;
+  }
+  .tank-row input,
+  .tank-row select {
+    @apply min-h-9 rounded-field border border-border bg-panel px-2.5 text-ink outline-none
+      transition focus:border-amber;
+  }
+  .tank-row__xfer {
+    @apply flex items-center gap-1.5 text-sm text-muted;
+  }
+  .tank-row__xfer input {
+    @apply min-h-0 w-4;
+  }
+
+  /* Widen the modal when it hosts the line builder. */
+  .modal:has(.line-form) {
+    @apply w-[min(720px,100%)];
+  }
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .app-shell,
+  .app-shell--collapsed {
+    grid-template-columns: 68px 1fr;
+  }
+  .sidebar__title,
+  .whoami__meta {
+    display: none;
+  }
+  .navitem span:not(.navitem__icon) {
+    display: none;
+  }
+  .navitem,
+  .whoami {
+    justify-content: center;
+  }
+  .pagetab {
+    padding: 0.4rem 0.7rem;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Crane visualizer (Crane View page)                                  *
+ * ------------------------------------------------------------------ */
+.crane-viz {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+}
+.crane-viz__status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.crane-chip {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-ink);
+  background: var(--color-bg);
+}
+.crane-chip--state {
+  background: color-mix(in srgb, var(--role-manager) 16%, transparent);
+  border-color: color-mix(in srgb, var(--role-manager) 45%, transparent);
+}
+.crane-chip--state.is-done {
+  background: color-mix(in srgb, var(--role-operator) 18%, transparent);
+  border-color: color-mix(in srgb, var(--role-operator) 50%, transparent);
+}
+.crane-chip--busy {
+  background: color-mix(in srgb, var(--color-amber) 20%, transparent);
+  border-color: var(--color-amber);
+}
+.crane-chip--done {
+  background: var(--role-operator);
+  border-color: var(--role-operator);
+  color: var(--color-on-role);
+}
+
+.crane-viz__stage {
+  position: relative;
+  height: 320px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: linear-gradient(180deg, var(--color-bg), var(--color-panel));
+  overflow: hidden;
+}
+.crane-viz__beam {
+  position: absolute;
+  top: 18px;
+  left: 12px;
+  right: 12px;
+  height: 10px;
+  border-radius: 4px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--color-border-strong),
+    var(--color-border-strong) 6px,
+    var(--color-border) 6px,
+    var(--color-border) 12px
+  );
+}
+
+.crane-viz__trolley {
+  position: absolute;
+  top: 12px;
+  bottom: 96px;
+  width: 0;
+  transform: translateX(-50%);
+  transition: left 0.7s cubic-bezier(0.34, 0.01, 0.2, 1);
+}
+.crane-viz__cart {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--color-muted);
+}
+.crane-viz__cart-body {
+  width: 46px;
+  height: 22px;
+  border-radius: 4px;
+  background: var(--role-manager);
+  border: 1px solid color-mix(in srgb, var(--role-manager) 70%, #000);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
+}
+.crane-viz__cart.is-moving .crane-viz__cart-body {
+  animation: crane-pulse 1s ease-in-out infinite;
+}
+.crane-viz__cable {
+  position: absolute;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  background: var(--color-border-strong);
+  transition: height 0.5s ease;
+}
+.crane-viz__carrier {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 20px;
+  border-radius: 3px;
+  background: var(--color-amber);
+  border: 1px solid color-mix(in srgb, var(--color-amber) 65%, #000);
+  color: var(--color-amber-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 0.3);
+  transition: top 0.5s ease;
+}
+
+.crane-viz__stations {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 14px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.crane-station {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.crane-station__switch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-border-strong);
+  border: 1px solid var(--color-border);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.crane-station__switch.is-on {
+  background: var(--role-operator);
+  border-color: var(--role-operator);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--role-operator) 80%, transparent);
+}
+.crane-station__box {
+  width: 74%;
+  min-height: 92px;
+  border-radius: 6px;
+  border: 2px solid var(--color-border-strong);
+  background: var(--color-panel);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 8px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.crane-station--park .crane-station__box,
+.crane-station--load .crane-station__box {
+  border-style: dashed;
+}
+.crane-station.is-here .crane-station__box {
+  border-color: var(--role-manager);
+  box-shadow: inset 0 0 0 1px var(--role-manager),
+    0 0 12px color-mix(in srgb, var(--role-manager) 35%, transparent);
+}
+.crane-station__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+.crane-station.is-here .crane-station__label {
+  color: var(--color-ink);
+}
+.crane-viz__note {
+  margin-top: 4px;
+}
+
+@keyframes crane-pulse {
+  0%,
+  100% {
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 14px color-mix(in srgb, var(--role-manager) 75%, transparent);
+  }
+}
+
+@media (max-width: 640px) {
+  .crane-viz__stage {
+    height: 260px;
+  }
+  .crane-station__label {
+    font-size: 11px;
+  }
+}

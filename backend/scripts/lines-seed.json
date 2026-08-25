@@ -1,0 +1,480 @@
+[
+  {
+    "name": "line1",
+    "cranes": [
+      "1A",
+      "1B"
+    ],
+    "tanks": [
+      {
+        "number": 1,
+        "name": "2-1A",
+        "crane": "1A"
+      },
+      {
+        "number": 2,
+        "name": "2-1B",
+        "crane": "1A"
+      },
+      {
+        "number": 3,
+        "name": "2-2",
+        "crane": "1A"
+      },
+      {
+        "number": 4,
+        "name": "INS-1A",
+        "crane": "1A"
+      },
+      {
+        "number": 5,
+        "name": "2-3",
+        "crane": "1A"
+      },
+      {
+        "number": 6,
+        "name": "2-4A",
+        "crane": "1A"
+      },
+      {
+        "number": 7,
+        "name": "2-4B",
+        "crane": "1A"
+      },
+      {
+        "number": 8,
+        "name": "2-5",
+        "crane": "1A"
+      },
+      {
+        "number": 9,
+        "name": "14-3",
+        "crane": "1A"
+      },
+      {
+        "number": 10,
+        "name": "TRVL-1A",
+        "crane": "1A",
+        "transfer": true
+      },
+      {
+        "number": 11,
+        "name": "7-1",
+        "crane": "1B"
+      },
+      {
+        "number": 12,
+        "name": "7-2",
+        "crane": "1B"
+      },
+      {
+        "number": 13,
+        "name": "14-2",
+        "crane": "1B"
+      },
+      {
+        "number": 14,
+        "name": "14-1",
+        "crane": "1B"
+      }
+    ]
+  },
+  {
+    "name": "line2",
+    "cranes": [
+      "2",
+      "3"
+    ],
+    "tanks": [
+      {
+        "number": 1,
+        "name": "15-3",
+        "crane": "2"
+      },
+      {
+        "number": 2,
+        "name": "4-7",
+        "crane": "2"
+      },
+      {
+        "number": 3,
+        "name": "4-9",
+        "crane": "2"
+      },
+      {
+        "number": 4,
+        "name": "INS-2A",
+        "crane": "2"
+      },
+      {
+        "number": 5,
+        "name": "4-10",
+        "crane": "2"
+      },
+      {
+        "number": 6,
+        "name": "4-6A",
+        "crane": "2"
+      },
+      {
+        "number": 7,
+        "name": "DRY-2A",
+        "crane": "3"
+      },
+      {
+        "number": 8,
+        "name": "4-8",
+        "crane": "3"
+      },
+      {
+        "number": 9,
+        "name": "4-1",
+        "crane": "3"
+      },
+      {
+        "number": 10,
+        "name": "4-2",
+        "crane": "3"
+      },
+      {
+        "number": 11,
+        "name": "4-3",
+        "crane": "3"
+      },
+      {
+        "number": 12,
+        "name": "4-4",
+        "crane": "3"
+      },
+      {
+        "number": 13,
+        "name": "4-5",
+        "crane": "3"
+      },
+      {
+        "number": 14,
+        "name": "INS-2B",
+        "crane": "3"
+      },
+      {
+        "number": 15,
+        "name": "4-11",
+        "crane": "3"
+      },
+      {
+        "number": 16,
+        "name": "4-6B",
+        "crane": "3"
+      },
+      {
+        "number": 17,
+        "name": "TRVL-2A",
+        "crane": "3",
+        "transfer": true
+      }
+    ]
+  },
+  {
+    "name": "line3",
+    "cranes": [
+      "4",
+      "5"
+    ],
+    "tanks": [
+      {
+        "number": 1,
+        "name": "1-16",
+        "crane": "4"
+      },
+      {
+        "number": 2,
+        "name": "1-15",
+        "crane": "4"
+      },
+      {
+        "number": 3,
+        "name": "1-14",
+        "crane": "4"
+      },
+      {
+        "number": 4,
+        "name": "1-13",
+        "crane": "4"
+      },
+      {
+        "number": 5,
+        "name": "1-12B",
+        "crane": "4"
+      },
+      {
+        "number": 6,
+        "name": "1-12A",
+        "crane": "4"
+      },
+      {
+        "number": 7,
+        "name": "TRVL-3A",
+        "crane": "4",
+        "transfer": true
+      },
+      {
+        "number": 8,
+        "name": "15-2",
+        "crane": "4"
+      },
+      {
+        "number": 9,
+        "name": "DRY-3A",
+        "crane": "5"
+      },
+      {
+        "number": 10,
+        "name": "3-4A",
+        "crane": "5"
+      },
+      {
+        "number": 11,
+        "name": "INS-3A",
+        "crane": "5"
+      },
+      {
+        "number": 12,
+        "name": "6-2",
+        "crane": "5"
+      },
+      {
+        "number": 13,
+        "name": "6-1",
+        "crane": "5"
+      },
+      {
+        "number": 14,
+        "name": "3-3",
+        "crane": "5"
+      },
+      {
+        "number": 15,
+        "name": "3-2",
+        "crane": "5"
+      },
+      {
+        "number": 16,
+        "name": "3-1B",
+        "crane": "5"
+      },
+      {
+        "number": 17,
+        "name": "3-1A",
+        "crane": "5"
+      },
+      {
+        "number": 18,
+        "name": "TRVL-3B",
+        "crane": "5",
+        "transfer": true
+      }
+    ]
+  },
+  {
+    "name": "line4",
+    "cranes": [
+      "7A",
+      "7B",
+      "6"
+    ],
+    "tanks": [
+      {
+        "number": 1,
+        "name": "1-1A",
+        "crane": "7A"
+      },
+      {
+        "number": 2,
+        "name": "1-1B",
+        "crane": "7A"
+      },
+      {
+        "number": 3,
+        "name": "1-2",
+        "crane": "7A"
+      },
+      {
+        "number": 4,
+        "name": "1-3",
+        "crane": "7A"
+      },
+      {
+        "number": 5,
+        "name": "1-4A",
+        "crane": "7A"
+      },
+      {
+        "number": 6,
+        "name": "1-4B",
+        "crane": "7A"
+      },
+      {
+        "number": 7,
+        "name": "1-4C",
+        "crane": "7B"
+      },
+      {
+        "number": 8,
+        "name": "1-5",
+        "crane": "7B"
+      },
+      {
+        "number": 9,
+        "name": "1-6",
+        "crane": "7B"
+      },
+      {
+        "number": 10,
+        "name": "TRVL-4B",
+        "crane": "7B",
+        "transfer": true
+      },
+      {
+        "number": 11,
+        "name": "1-7B",
+        "crane": "6"
+      },
+      {
+        "number": 12,
+        "name": "1-8",
+        "crane": "6"
+      },
+      {
+        "number": 13,
+        "name": "1-9",
+        "crane": "6"
+      },
+      {
+        "number": 14,
+        "name": "1-10A",
+        "crane": "6"
+      },
+      {
+        "number": 15,
+        "name": "1-10B",
+        "crane": "6"
+      },
+      {
+        "number": 16,
+        "name": "1-11",
+        "crane": "6"
+      },
+      {
+        "number": 17,
+        "name": "TRVL-4A",
+        "crane": "6",
+        "transfer": true
+      }
+    ]
+  },
+  {
+    "name": "line5",
+    "cranes": [
+      "8",
+      "9"
+    ],
+    "tanks": [
+      {
+        "number": 1,
+        "name": "5-2",
+        "crane": "8"
+      },
+      {
+        "number": 2,
+        "name": "INS-5A",
+        "crane": "8"
+      },
+      {
+        "number": 3,
+        "name": "5-3",
+        "crane": "8"
+      },
+      {
+        "number": 4,
+        "name": "INS-5B",
+        "crane": "8"
+      },
+      {
+        "number": 5,
+        "name": "5-1",
+        "crane": "8"
+      },
+      {
+        "number": 6,
+        "name": "INS-5C",
+        "crane": "8"
+      },
+      {
+        "number": 7,
+        "name": "5-4",
+        "crane": "8"
+      },
+      {
+        "number": 8,
+        "name": "5-5",
+        "crane": "8"
+      },
+      {
+        "number": 9,
+        "name": "DRY-5A",
+        "crane": "9"
+      },
+      {
+        "number": 10,
+        "name": "5-12",
+        "crane": "9"
+      },
+      {
+        "number": 11,
+        "name": "INS-5E",
+        "crane": "9"
+      },
+      {
+        "number": 12,
+        "name": "5-11",
+        "crane": "9"
+      },
+      {
+        "number": 13,
+        "name": "5-10",
+        "crane": "9"
+      },
+      {
+        "number": 14,
+        "name": "5-9",
+        "crane": "9"
+      },
+      {
+        "number": 15,
+        "name": "INS-5D",
+        "crane": "9"
+      },
+      {
+        "number": 16,
+        "name": "5-8",
+        "crane": "9"
+      },
+      {
+        "number": 17,
+        "name": "5-7",
+        "crane": "9"
+      },
+      {
+        "number": 18,
+        "name": "5-6",
+        "crane": "9"
+      },
+      {
+        "number": 19,
+        "name": "TRVL-5A",
+        "crane": "9",
+        "transfer": true
+      }
+    ]
+  }
+]

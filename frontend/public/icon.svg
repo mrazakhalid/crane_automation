@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1E293B"/>
+      <stop offset="1" stop-color="#0B1120"/>
+    </linearGradient>
+  </defs>
+
+  <!-- App background: dark squircle -->
+  <rect x="0" y="0" width="256" height="256" rx="60" fill="url(#bg)"/>
+
+  <!-- Tower crane, bold amber silhouette -->
+  <g fill="none" stroke="#FBBF24" stroke-width="13" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M78 208 H122"/>          <!-- base foot -->
+    <path d="M100 208 V92"/>          <!-- mast -->
+    <path d="M100 92 H58"/>           <!-- counter-jib (short arm) -->
+    <path d="M100 92 H214"/>          <!-- jib (working arm) -->
+  </g>
+
+  <!-- Cat-head apex + tie bars -->
+  <g fill="none" stroke="#FBBF24" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M100 92 V58"/>
+    <path d="M100 58 L176 92"/>
+    <path d="M100 58 L60 92"/>
+  </g>
+
+  <!-- Counterweight -->
+  <rect x="42" y="86" width="20" height="28" rx="4" fill="#FBBF24"/>
+
+  <!-- Trolley on the jib -->
+  <rect x="172" y="85" width="16" height="13" rx="3" fill="#FBBF24"/>
+
+  <!-- Hoist cable -->
+  <path d="M180 98 V150" fill="none" stroke="#E2E8F0" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Hook -->
+  <path d="M180 150 q0 11 -8 13 q-10 2 -10 -7" fill="none" stroke="#FBBF24" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

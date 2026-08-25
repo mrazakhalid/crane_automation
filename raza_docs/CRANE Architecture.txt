@@ -1,0 +1,52 @@
+LINE: 4 | PLC4: C7A, C6 | PLC6: C7B
+============
+total positions 21
+total tanks 17
+Loading Area: 1
+parking: 3
+============
+         21 
+cranes: 3 (7A, 7B, 6) 
+Tanks: Names
+=====C7A========
+1 : 1-1A
+2: 1-1B
+3: 1-2
+4: 1-3
+5: 1-4A
+=====C7A end========
+6: 1-4B transfer tank (common with C74 and C7B)
+=====C7B========
+7: 1-4C
+8: 1-5
+9: 1-6
+=====C7B end========
+10: TRVL-4B transfer tank
+=====C6========
+11: 1-7b
+12: 1-8
+13: 1-9
+14: 1-10A
+15: 1-10B
+16: 1-11
+17: TRVL-4A
+=====C6 End========
+
+
+=====TASK FORMAT=====
+crane_name
+tank_name
+time
+next_task
+previous_task
+status
+
+
+
+
+
+
+
+
+
+
