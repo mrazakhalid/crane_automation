@@ -74,6 +74,33 @@ Siemens — no code change. See [`concepts/opcua-explained.md`](./concepts/opcua
 
 ## Build log (newest first)
 
+### 2026-08-26 — Per-crane PLC code (real I/O) + per-crane software signal routing
+- **PLC side (new `plc/` tree):** one folder per PLC; every crane runs an **independent copy** of the
+  proven Line 4 sequencer against its **own DB** `Crane<ID>Data` (duplicate-per-crane, DB rename
+  only — no logic change). New per-PLC **`IOMap` FC** maps real `%I`/`%Q` ↔ the DB mirror from
+  `docs/plc/plant-panel-layout.md` — the piece the Line 4 program lacked, so it drives real
+  hardware. Delivered: `plc/README.md`, `plc/_shared/blocks.md` (create-once blocks), and the
+  **reference** `plc/PLC_4_line4/` (cranes 6 & 7A: `IOMap.scl`, `README.md` with station↔tank↔`%I`
+  + motor↔`%Q` tables, `OB1.md`). Crane 6 fully wired; crane 7A partial (panel extract lacks its
+  per-tank/parking switches → marked `TODO %I?.?`). Downstream-crane Loading mapped to the
+  transfer-tank switch.
+- **Software (`batch.service.ts`):** replaced per-PLC-merged routing with **per-crane** —
+  `craneDbName(crane)` → `Crane<ID>Data`, `planBatchByCrane` (each crane its own array + DB, 2
+  cranes on 1 PLC → 2 groups), `sendBatch` dispatches per crane, `getBatchStatus`/`ackBatch`/
+  `getCraneView` take an optional crane → its DB. New `?crane=` on the batch-status/ack/crane-view
+  routes (`plc.schema.ts`). Signals now line up 1:1 with the PLC blocks. `plc-batch.test.ts`
+  reworked (per-crane grouping + `Crane<ID>Data` NodeIds + `craneDbName`). Backend lint/typecheck +
+  106 tests green.
+- **All 6 PLC folders generated** (`plc/PLC_1_line1` … `PLC_6_line4`): per-crane `IOMap.scl` with
+  real `%I`/`%Q` derived by cross-referencing `plant-panel-layout.md` (addresses) × `lines-seed.json`
+  (tank→station), plus per-PLC README (station↔tank↔`%I` tables) + OB1 call order. Cranes 1A/1B/2/3/
+  4/5/8/9 have their tank switches; **cranes 7A & 7B lack tank/parking switches in the panel extract
+  → marked `TODO %I?.?`**. Downstream cranes (2/4/6/8/1B/7B) map Loading to their transfer-pickup
+  switch (or TODO where none is listed). `R-Hoist`/`R-Trolley` driven as enables (`mv_up|mv_down` /
+  `mv_fwd|mv_rev`).
+- **Next:** build PLC_4 in TIA + validate on the sim (fill the 7A/7B TODOs from the drawings), then
+  the rest follow the same steps. See `docs/concepts/plc-per-crane.md`.
+
 ### 2026-08-25 — Manager Dashboard drops the line picker → auto-divides across all lines
 - Per request, the manager's **Dashboard** QR tool no longer asks you to pick a line. Extracted the
   recipe → divide → run flow into `components/ProcessWorkspace.tsx` (owns `useRecipes` +

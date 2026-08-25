@@ -100,6 +100,20 @@
   the OPC UA swap is localized to `run-engine.ts`. Green: backend 105 tests, frontend 29 tests.
   See `docs/concepts/process.md`.
 
+- **Phase 6 — Per-crane PLC code + real I/O (2026-08-26):** New `plc/` tree, one folder per PLC.
+  Each crane runs an **independent copy** of the proven Line 4 sequencer against its own DB
+  `Crane<ID>Data` (duplicate-per-crane, DB rename only), plus a per-PLC **`IOMap` FC** that wires
+  real `%I`/`%Q` ↔ the DB mirror from `docs/plc/plant-panel-layout.md` (the real-wiring piece the
+  Line 4 program lacked). Shipped: `plc/_shared/blocks.md` + the reference `plc/PLC_4_line4/`
+  (cranes 6 & 7A). Software refactored to **per-crane** routing/signals (`batch.service`:
+  `craneDbName`, `planBatchByCrane`, per-crane `sendBatch`/status; `?crane=` param), 106 backend
+  tests green. **All 6 PLC folders now generated** (`plc/PLC_1_line1` … `PLC_6_line4`) — per-crane
+  `IOMap.scl` (real `%I`/`%Q` from `plant-panel-layout.md` × `lines-seed.json`), READMEs with
+  station↔tank↔`%I` tables, OB1 call order. **Remaining:** build/validate on the sim, and fill the
+  `TODO %I?.?` gaps — cranes **7A & 7B** lack tank/parking switches in the panel extract, and
+  downstream cranes (1B/2/8) lack a listed loading/transfer switch. Transfer-tank handoff + safety
+  interlocks are flagged follow-ups. See `docs/concepts/plc-per-crane.md`.
+
 ## Remaining
 
 - **Run the Electron packaging once** (`cd desktop && npm install && npm run bundle`) — the

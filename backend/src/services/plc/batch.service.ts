@@ -54,6 +54,21 @@ function scalarNode(tag: string, opts: NodeOpts = defaultNodeOpts): string {
 }
 
 /**
+ * The DB name for a crane's own data block, e.g. `7A` → `Crane7AData`.
+ *
+ * Each crane on a PLC has an INDEPENDENT DB (task array + handshake + I/O mirror)
+ * so cranes run in parallel — matching the per-crane PLC programs in `plc/`.
+ */
+export function craneDbName(crane: string): string {
+  return `Crane${crane.replace(/[^A-Za-z0-9]/g, '')}Data`;
+}
+
+/** NodeId options for a crane's own DB, or the env default DB when no crane is given. */
+function optsForCrane(crane?: string): NodeOpts {
+  return crane ? { namespace: defaultNodeOpts.namespace, db: craneDbName(crane) } : defaultNodeOpts;
+}
+
+/**
  * Build a task-array field NodeId for the 1-based task number `taskNo`
  * (S7 `tasks[1..20]`), e.g. `ns=3;s="Line4Data"."tasks"[0]."station"`.
  *
@@ -97,7 +112,7 @@ function buildTaskWrites(tasks: PlannedTask[], opts: NodeOpts): BatchWrite[] {
  * Plan the OPC UA writes for a QR recipe against a line, as ONE task array (pure).
  *
  * Used for the legacy single-PLC path (a line with no per-crane PLC binding —
- * e.g. the sim). For multi-PLC lines see `planBatchByConnection`.
+ * e.g. the sim). For multi-crane lines see `planBatchByCrane`.
  *
  * Args: line — the saved line; qr — the decoded recipe text; opts — namespace/DB
  *   for NodeId construction (defaults from env).
@@ -138,17 +153,24 @@ export interface CraneOwner {
   cranes: string[];
 }
 
-/** The per-PLC writes for one connection in a routed batch. */
-export interface ConnectionBatch {
+/** The per-crane writes + target for one crane in a routed batch. */
+export interface CraneBatch {
+  /** The PLC session that owns this crane. */
   connectionId: string;
-  name: string;
+  /** The owning PLC's name (for messages). */
+  plcName: string;
+  /** The crane code, e.g. `6`, `7A`. */
+  crane: string;
+  /** The crane's OWN data block, e.g. `Crane6Data`. */
+  db: string;
   writes: BatchWrite[];
   count: number;
 }
 
-/** A recipe routed across the line's PLCs, plus anything that could not be routed. */
+/** A recipe routed to each crane's own DB, plus anything that could not be routed. */
 export interface RoutedBatchPlan {
-  groups: ConnectionBatch[];
+  /** One group per crane that received at least one task. */
+  groups: CraneBatch[];
   /** QR keys that resolved to no tank in the line. */
   missing: string[];
   /** Tasks whose tank has no PLC owning its crane (config gap). */
@@ -156,21 +178,24 @@ export interface RoutedBatchPlan {
 }
 
 /**
- * Plan a QR recipe across the line's PLCs (pure — no I/O), splitting by
- * tank → crane → owning PLC and renumbering each PLC's tasks from 1.
+ * Plan a QR recipe PER CRANE (pure — no I/O): split by tank → crane, renumber
+ * each crane's tasks from 1, and target each crane's OWN DB (`Crane<ID>Data`).
+ *
+ * Cranes on the same PLC therefore get INDEPENDENT arrays + handshakes and run in
+ * parallel — matching the per-crane PLC programs (`plc/` folders) and the app's
+ * per-crane process chains.
  *
  * Args: line — the saved line; qr — the recipe text; owners — the line's PLCs and
- *   the cranes each controls; opts — namespace/DB for NodeIds.
- * Returns: `{ groups, missing, unrouted }` — one group per PLC that received at
- *   least one task, preserving recipe order within each PLC.
- * Raises: 400 if the recipe is empty, or if any single PLC would receive more than
- *   `MAX_TASKS` tasks (its array bound).
+ *   the cranes each controls; opts — the OPC UA namespace (the DB is per crane).
+ * Returns: `{ groups, missing, unrouted }` — one group per crane that got a task,
+ *   preserving recipe order within each crane.
+ * Raises: 400 if the recipe is empty, or if any single crane would exceed `MAX_TASKS`.
  */
-export function planBatchByConnection(
+export function planBatchByCrane(
   line: PublicLine,
   qr: string,
   owners: CraneOwner[],
-  opts: NodeOpts = defaultNodeOpts,
+  opts: { namespace: number } = { namespace: defaultNodeOpts.namespace },
 ): RoutedBatchPlan {
   const entries = parseQr(qr);
   if (entries.length === 0) {
@@ -183,6 +208,7 @@ export function planBatchByConnection(
     for (const crane of owner.cranes) craneToOwner.set(crane, owner);
   }
 
+  // Bucket by CRANE, preserving recipe order within each crane.
   const buckets = new Map<string, { owner: CraneOwner; tasks: PlannedTask[] }>();
   const missing: string[] = [];
   const unrouted: { key: string; crane: string }[] = [];
@@ -198,22 +224,25 @@ export function planBatchByConnection(
       unrouted.push({ key: entry.key, crane: tank.crane });
       continue;
     }
-    const bucket = buckets.get(owner.connectionId) ?? { owner, tasks: [] };
+    const bucket = buckets.get(tank.crane) ?? { owner, tasks: [] };
     bucket.tasks.push({ station: tank.number + 1, time: entry.time });
-    buckets.set(owner.connectionId, bucket);
+    buckets.set(tank.crane, bucket);
   }
 
-  const groups: ConnectionBatch[] = [...buckets.values()].map(({ owner, tasks }) => {
+  const groups: CraneBatch[] = [...buckets.entries()].map(([crane, { owner, tasks }]) => {
     if (tasks.length > MAX_TASKS) {
       throw new HttpError(
         400,
-        `PLC "${owner.name}" would receive ${tasks.length} tasks but its array holds at most ${MAX_TASKS}.`,
+        `Crane "${crane}" would receive ${tasks.length} tasks but its array holds at most ${MAX_TASKS}.`,
       );
     }
+    const db = craneDbName(crane);
     return {
       connectionId: owner.connectionId,
-      name: owner.name,
-      writes: buildTaskWrites(tasks, opts),
+      plcName: owner.name,
+      crane,
+      db,
+      writes: buildTaskWrites(tasks, { namespace: opts.namespace, db }),
       count: tasks.length,
     };
   });
@@ -221,24 +250,26 @@ export function planBatchByConnection(
   return { groups, missing, unrouted };
 }
 
-/** What one PLC received in a routed send. */
+/** What one crane received in a routed send. */
 export interface DispatchResult {
   connectionId: string;
-  name: string;
+  plcName: string;
+  crane: string;
+  db: string;
   count: number;
 }
 
 /**
- * Send a QR recipe to the line's PLC(s) and arm each run.
+ * Send a QR recipe to the line's cranes and arm each run.
  *
  * Routing: if any of the line's PLCs is bound to cranes, the recipe is split by
- * tank → crane → PLC and each PLC receives ONLY its own tanks (renumbered from 1),
- * over that PLC's own session. If NO PLC is bound to the line (legacy/sim), the
- * whole recipe is sent to the active connection as a single array — preserving
- * the original single-PLC behaviour.
+ * tank → crane and each crane receives ONLY its own tanks (renumbered from 1) into
+ * its OWN DB (`Crane<ID>Data`), over that crane's PLC session — so two cranes on
+ * one PLC run in parallel. If NO PLC is bound to the line (legacy/sim), the whole
+ * recipe is sent to the active connection as a single array on the default DB.
  *
  * Args: lineId — the saved line id; qr — the decoded recipe text.
- * Returns: `{ dispatched, count, busy: true }` — per-PLC counts + the total.
+ * Returns: `{ dispatched, count, busy: true }` — per-crane counts + the total.
  * Raises: 404 if the line is absent; 400 if a tank is not in the line or a tank's
  *   crane has no PLC assigned; 409 if a target PLC is not connected; 502 on write.
  */
@@ -249,19 +280,21 @@ export async function sendBatch(
   const line = await getLine(lineId); // 404 if the line does not exist
   const owners = (await connRepo.listByLine(lineId)).filter((c) => c.cranes.length > 0);
 
-  // Legacy single-PLC path: no per-crane binding → one array on the active PLC.
+  // Legacy single-PLC path: no per-crane binding → one array on the active PLC's default DB.
   if (owners.length === 0) {
     const plan = planBatch(line, qr);
     if (plan.missing.length > 0) throw missingTanksError(line.name, plan.missing);
-    await dispatchWrites(plan.writes, DEFAULT_CONNECTION_ID);
+    await dispatchWrites(plan.writes, DEFAULT_CONNECTION_ID, defaultNodeOpts.db);
     return {
-      dispatched: [{ connectionId: DEFAULT_CONNECTION_ID, name: line.name, count: plan.count }],
+      dispatched: [
+        { connectionId: DEFAULT_CONNECTION_ID, plcName: line.name, crane: '', db: defaultNodeOpts.db, count: plan.count },
+      ],
       count: plan.count,
       busy: true,
     };
   }
 
-  const routed = planBatchByConnection(
+  const routed = planBatchByCrane(
     line,
     qr,
     owners.map((c) => ({ connectionId: c._id, name: c.name, cranes: c.cranes })),
@@ -276,11 +309,17 @@ export async function sendBatch(
     );
   }
 
-  // Dispatch each PLC's slice on its own session (data first, cmd_send last).
+  // Dispatch each crane's slice to its OWN DB (data first, cmd_send last), over its PLC session.
   const dispatched: DispatchResult[] = [];
   for (const group of routed.groups) {
-    await dispatchWrites(group.writes, group.connectionId);
-    dispatched.push({ connectionId: group.connectionId, name: group.name, count: group.count });
+    await dispatchWrites(group.writes, group.connectionId, group.db);
+    dispatched.push({
+      connectionId: group.connectionId,
+      plcName: group.plcName,
+      crane: group.crane,
+      db: group.db,
+      count: group.count,
+    });
   }
   const count = dispatched.reduce((sum, d) => sum + d.count, 0);
   return { dispatched, count, busy: true };
@@ -296,14 +335,22 @@ function missingTanksError(lineName: string, missing: string[]): HttpError {
 }
 
 /**
- * Write a PLC's task data, then arm `cmd_send` LAST so the PLC's rising-edge start
- * only fires once every task field and the count are already in place.
+ * Write a crane's task data to its DB, then arm `cmd_send` LAST so the PLC's
+ * rising-edge start only fires once every task field and the count are in place.
+ *
+ * Args: writes — the task writes (already targeting `db`); connectionId — the PLC
+ *   session; db — the crane's DB name (so `cmd_send` is armed on the right DB).
  */
-async function dispatchWrites(writes: BatchWrite[], connectionId: string): Promise<void> {
+async function dispatchWrites(writes: BatchWrite[], connectionId: string, db: string): Promise<void> {
   for (const w of writes) {
     await writeNode(w.nodeId, w.dataType, w.value, connectionId);
   }
-  await writeNode(scalarNode('cmd_send'), 'Boolean', true, connectionId);
+  await writeNode(
+    scalarNode('cmd_send', { namespace: defaultNodeOpts.namespace, db }),
+    'Boolean',
+    true,
+    connectionId,
+  );
 }
 
 /** The PLC's handshake snapshot the UI polls while a batch runs. */
@@ -314,19 +361,22 @@ export interface BatchStatus {
 }
 
 /**
- * Read the crane run's handshake (busy / done / current step) from one PLC.
+ * Read a crane run's handshake (busy / done / current step) from one PLC.
  *
- * Args: connectionId — which PLC to read (defaults to the legacy active slot).
+ * Args: connectionId — which PLC to read (defaults to the legacy active slot);
+ *   crane — which crane's DB (`Crane<ID>Data`); omitted → the env default DB.
  * Returns: `{ busy, done, step }` read from `sts_busy` / `sts_done` / `sts_step`.
  * Raises: 409 if not connected; 502 on an OPC UA read failure.
  */
 export async function getBatchStatus(
   connectionId: string = DEFAULT_CONNECTION_ID,
+  crane?: string,
 ): Promise<BatchStatus> {
+  const opts = optsForCrane(crane);
   const [busy, done, step] = await Promise.all([
-    readNode(scalarNode('sts_busy'), connectionId),
-    readNode(scalarNode('sts_done'), connectionId),
-    readNode(scalarNode('sts_step'), connectionId),
+    readNode(scalarNode('sts_busy', opts), connectionId),
+    readNode(scalarNode('sts_done', opts), connectionId),
+    readNode(scalarNode('sts_step', opts), connectionId),
   ]);
   return {
     busy: Boolean(busy.value),
@@ -339,13 +389,17 @@ export async function getBatchStatus(
  * Acknowledge a completed batch by clearing `cmd_send` (the PLC clears `sts_done`
  * and returns to idle, ready for the next recipe).
  *
- * Args: connectionId — which PLC to acknowledge (defaults to the legacy slot).
+ * Args: connectionId — which PLC to acknowledge (defaults to the legacy slot);
+ *   crane — which crane's DB (omitted → the env default DB).
  * Returns: the fresh `BatchStatus` after the ack.
  * Raises: 409 if not connected; 502 on an OPC UA failure.
  */
-export async function ackBatch(connectionId: string = DEFAULT_CONNECTION_ID): Promise<BatchStatus> {
-  await writeNode(scalarNode('cmd_send'), 'Boolean', false, connectionId);
-  return getBatchStatus(connectionId);
+export async function ackBatch(
+  connectionId: string = DEFAULT_CONNECTION_ID,
+  crane?: string,
+): Promise<BatchStatus> {
+  await writeNode(scalarNode('cmd_send', optsForCrane(crane)), 'Boolean', false, connectionId);
+  return getBatchStatus(connectionId, crane);
 }
 
 /** Vertical hoist position derived from the limit switches / motor bits. */
@@ -376,27 +430,30 @@ export interface CraneView {
  * Purpose: Give the Crane View page everything it needs to animate the gantry —
  *   horizontal station (from `ls_at`), vertical hoist (from `ls_up`/`ls_dip`/`mv_*`),
  *   and the run status — in a single call. The whole `ls_at` array is read as one node.
- * Args: connectionId — which PLC/crane to read (defaults to the legacy slot).
+ * Args: connectionId — which PLC to read (defaults to the legacy slot); crane —
+ *   which crane's DB (`Crane<ID>Data`); omitted → the env default DB.
  * Returns: a `CraneView`.
  * Raises: 409 if not connected; 502 on an OPC UA read failure.
  */
 export async function getCraneView(
   connectionId: string = DEFAULT_CONNECTION_ID,
+  crane?: string,
 ): Promise<CraneView> {
+  const o = optsForCrane(crane);
   const [state, step, busy, done, taskCount, lsDip, lsUp, mvFwd, mvRev, mvUp, mvDown, lsAtRes] =
     await Promise.all([
-      readNode(scalarNode('sts_state'), connectionId),
-      readNode(scalarNode('sts_step'), connectionId),
-      readNode(scalarNode('sts_busy'), connectionId),
-      readNode(scalarNode('sts_done'), connectionId),
-      readNode(scalarNode('task_count'), connectionId),
-      readNode(scalarNode('ls_dip'), connectionId),
-      readNode(scalarNode('ls_up'), connectionId),
-      readNode(scalarNode('mv_fwd'), connectionId),
-      readNode(scalarNode('mv_rev'), connectionId),
-      readNode(scalarNode('mv_up'), connectionId),
-      readNode(scalarNode('mv_down'), connectionId),
-      readNode(scalarNode('ls_at'), connectionId), // whole Bool array in one read
+      readNode(scalarNode('sts_state', o), connectionId),
+      readNode(scalarNode('sts_step', o), connectionId),
+      readNode(scalarNode('sts_busy', o), connectionId),
+      readNode(scalarNode('sts_done', o), connectionId),
+      readNode(scalarNode('task_count', o), connectionId),
+      readNode(scalarNode('ls_dip', o), connectionId),
+      readNode(scalarNode('ls_up', o), connectionId),
+      readNode(scalarNode('mv_fwd', o), connectionId),
+      readNode(scalarNode('mv_rev', o), connectionId),
+      readNode(scalarNode('mv_up', o), connectionId),
+      readNode(scalarNode('mv_down', o), connectionId),
+      readNode(scalarNode('ls_at', o), connectionId), // whole Bool array in one read
     ]);
 
   const rawLsAt = lsAtRes.value as unknown;

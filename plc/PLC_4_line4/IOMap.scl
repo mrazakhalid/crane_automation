@@ -1,0 +1,64 @@
+// ============================================================================
+//  IOMap  —  PLC_4 (Line 4, cranes 6 & 7A)  —  real %I/%Q  ↔  crane DB mirrors
+// ----------------------------------------------------------------------------
+//  Block type : FUNCTION (FC), language SCL, return type Void, NO parameters.
+//  Call it FIRST in OB1 (before the crane sequencers) so inputs are fresh and
+//  the motor bits the sequencers set this scan reach %Q the same scan.
+//
+//  Addresses are taken verbatim from docs/plc/plant-panel-layout.md (PLC_4).
+//  The %I/%Q addresses must match the hardware I/O module addresses in the PLC
+//  tag table / device config.
+//
+//  Station map: 0=Parking  1=Loading  s = tank.number + 1  (line-wide numbering).
+// ============================================================================
+
+// ============================ CRANE 6  (Crane6Data) ==========================
+//  Crane 6 is DOWNSTREAM (no loading bay) — it picks material up at TRVL-4A, so
+//  Loading (station 1) is mapped to the same TRVL-4A switch as station 18.
+// --- inputs  %I -> mirror ---
+"Crane6Data".ls_mid    := %I0.3;      // LS_Mid_C6
+"Crane6Data".ls_up     := %I0.4;      // LS_Up_C6
+"Crane6Data".ls_dip    := %I0.5;      // LS_Down_C6
+"Crane6Data".estop     := %I0.0;      // E-Stop_SW_C6   (mirror only; interlock = follow-up)
+"Crane6Data".auto      := %I0.1;      // Auto_SW_C6
+"Crane6Data".btn_start := %I2.1;      // UP_Pendant_C6  (hold 3 s to start)
+"Crane6Data".ls_at[0]  := %I0.7;      // PRK-4A_C6      (Parking)
+"Crane6Data".ls_at[1]  := %I1.6;      // TRVL-4A_C6     (Loading = transfer pickup)
+"Crane6Data".ls_at[12] := %I1.0;      // 1-7B_C6   (tank 11 -> station 12)
+"Crane6Data".ls_at[13] := %I1.1;      // 1-8_C6    (tank 12 -> station 13)
+"Crane6Data".ls_at[14] := %I1.2;      // 1-9_C6    (tank 13 -> station 14)
+"Crane6Data".ls_at[15] := %I1.3;      // 1-10A_C6  (tank 14 -> station 15)
+"Crane6Data".ls_at[16] := %I1.4;      // 1-10B_C6  (tank 15 -> station 16)
+"Crane6Data".ls_at[17] := %I1.5;      // 1-11_C6   (tank 16 -> station 17)
+"Crane6Data".ls_at[18] := %I1.6;      // TRVL-4A_C6 (tank 17 -> station 18)
+// --- outputs  mirror -> %Q ---
+%Q0.4 := "Crane6Data".mv_up;          // R-Up-1_C6
+%Q0.5 := "Crane6Data".mv_down;        // R-Down-1_C6
+%Q0.6 := "Crane6Data".mv_fwd;         // R-East-1_C6   (forward / higher station)
+%Q0.7 := "Crane6Data".mv_rev;         // R-West-1_C6   (reverse / lower station)
+
+// ============================ CRANE 7A  (Crane7AData) ========================
+//  Crane 7A is the line ENTRY crane (has LOAD bays). NOTE: the panel extract for
+//  7A does NOT list per-tank or parking limit switches — fill the TODOs below
+//  from the real drawings before running 7A on hardware.
+// --- inputs  %I -> mirror ---
+"Crane7AData".ls_mid    := %I4.3;     // LS_Mid_C7A
+"Crane7AData".ls_up     := %I4.4;     // LS_Up_C7A
+"Crane7AData".ls_dip    := %I4.5;     // LS_Down_C7A
+"Crane7AData".estop     := %I4.0;     // E-Stop_SW_C7A
+"Crane7AData".auto      := %I4.1;     // Auto_SW_C7A
+"Crane7AData".btn_start := %I6.1;     // UP_Pendant_C7A
+"Crane7AData".ls_at[1]  := %I6.3;     // LOAD-4B_C7A   (Loading; LOAD-4C=%I6.4 / LOAD-4D=%I6.5 are extra bays)
+// TODO (not in the panel extract for 7A — fill from the drawings):
+//   "Crane7AData".ls_at[0] := %I?.?;   // Parking (no PRK-*_C7A found)
+//   "Crane7AData".ls_at[2] := %I?.?;   // 1-1A_C7A  (tank 1 -> station 2)
+//   "Crane7AData".ls_at[3] := %I?.?;   // 1-1B_C7A  (tank 2 -> station 3)
+//   "Crane7AData".ls_at[4] := %I?.?;   // 1-2_C7A   (tank 3 -> station 4)
+//   "Crane7AData".ls_at[5] := %I?.?;   // 1-3_C7A   (tank 4 -> station 5)
+//   "Crane7AData".ls_at[6] := %I?.?;   // 1-4A_C7A  (tank 5 -> station 6)
+//   "Crane7AData".ls_at[7] := %I?.?;   // 1-4B_C7A  (tank 6 -> station 7)
+// --- outputs  mirror -> %Q ---
+%Q2.4 := "Crane7AData".mv_up;         // R-Up-1_C7A
+%Q2.5 := "Crane7AData".mv_down;       // R-Down-1_C7A
+%Q2.6 := "Crane7AData".mv_fwd;        // R-East-1_C7A
+%Q2.7 := "Crane7AData".mv_rev;        // R-West-1_C7A

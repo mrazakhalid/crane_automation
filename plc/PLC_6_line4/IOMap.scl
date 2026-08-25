@@ -1,0 +1,30 @@
+// ============================================================================
+//  IOMap  —  PLC_6 (Line 4, crane 7B)  —  real %I/%Q ↔ crane DB mirror
+//  FUNCTION (FC), SCL, return Void, no params. Call FIRST in OB1.
+//  Addresses from docs/plc/plant-panel-layout.md (PLC_6). Station = tank.number + 1.
+// ============================================================================
+
+// ============================ CRANE 7B  (Crane7BData) — DOWNSTREAM ===========
+//  NOTE: the panel extract for 7B lists ONLY control/hoist/pendant/motor tags —
+//  NO parking and NO per-tank limit switches. Fill every TODO below from the real
+//  drawings before running 7B on hardware. On the sim, drive the ls_at[] bits
+//  from a watch table.
+"Crane7BData".ls_mid    := %I0.3;     // LS_Mid_C7B
+"Crane7BData".ls_up     := %I0.4;     // LS_Up_C7B
+"Crane7BData".ls_dip    := %I0.5;     // LS_Down_C7B
+"Crane7BData".estop     := %I0.0;     // E-Stop_SW_C7B
+"Crane7BData".auto      := %I0.1;     // Auto_SW_C7B
+"Crane7BData".btn_start := %I2.1;     // UP_Pendant_C7B
+// TODO — not in the panel extract for 7B (7B is downstream, fed by TRVL-4B):
+//   "Crane7BData".ls_at[0]  := %I?.?;  // Parking
+//   "Crane7BData".ls_at[1]  := %I?.?;  // transfer pickup (Loading) — likely the TRVL-4B switch
+//   "Crane7BData".ls_at[8]  := %I?.?;  // 1-4C_C7B  (tank 7 -> station 8)
+//   "Crane7BData".ls_at[9]  := %I?.?;  // 1-5_C7B   (tank 8 -> station 9)
+//   "Crane7BData".ls_at[10] := %I?.?;  // 1-6_C7B   (tank 9 -> station 10)
+//   "Crane7BData".ls_at[11] := %I?.?;  // TRVL-4B_C7B (tank 10 -> station 11)
+%Q0.4 := "Crane7BData".mv_up;         // R-Up-1_C7B
+%Q0.5 := "Crane7BData".mv_down;       // R-Down-1_C7B
+%Q0.6 := "Crane7BData".mv_fwd;        // R-East-1_C7B
+%Q0.7 := "Crane7BData".mv_rev;        // R-West-1_C7B
+%Q1.0 := "Crane7BData".mv_up OR "Crane7BData".mv_down;    // R-Hoist-1_C7B
+%Q1.1 := "Crane7BData".mv_fwd OR "Crane7BData".mv_rev;    // R-Trolley-1_C7B

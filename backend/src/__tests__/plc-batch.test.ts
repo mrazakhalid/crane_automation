@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { PublicLine } from '../models/line.model.js';
 import {
   MAX_TASKS,
+  craneDbName,
   planBatch,
-  planBatchByConnection,
+  planBatchByCrane,
   type CraneOwner,
 } from '../services/plc/batch.service.js';
 
@@ -90,8 +91,8 @@ describe('planBatch', () => {
 
 /**
  * A multi-PLC line (like the real Line 4): cranes 6 + 7A on one PLC, crane 7B on
- * another. Routing must split a recipe by tank → crane → PLC and renumber each
- * PLC's tasks from 1.
+ * another. Routing must split a recipe by tank → CRANE, renumber each crane's
+ * tasks from 1, and target each crane's OWN DB (`Crane<ID>Data`).
  */
 const multiLine: PublicLine = {
   id: 'line-4-multi',
@@ -110,41 +111,66 @@ const owners: CraneOwner[] = [
   { connectionId: 'plc4', name: 'PLC_4', cranes: ['6', '7A'] },
   { connectionId: 'plc6', name: 'PLC_6', cranes: ['7B'] },
 ];
+const nsOpts = { namespace: 3 };
 
-describe('planBatchByConnection', () => {
-  it('splits a recipe across PLCs by crane and renumbers each PLC from 1', () => {
-    // Order: 1-11(PLC_4), A3(PLC_4), 1-9(PLC_4), B4(PLC_6).
-    const { groups, missing, unrouted } = planBatchByConnection(
+describe('craneDbName', () => {
+  it('maps a crane code to its own DB name', () => {
+    expect(craneDbName('6')).toBe('Crane6Data');
+    expect(craneDbName('7A')).toBe('Crane7AData');
+    expect(craneDbName('1B')).toBe('Crane1BData');
+  });
+});
+
+describe('planBatchByCrane', () => {
+  it('splits a recipe by crane into independent per-crane DBs (2 cranes on 1 PLC → 2 groups)', () => {
+    // Order: 1-11(crane 6), A3(crane 7A), 1-9(crane 6), B4(crane 7B).
+    const { groups, missing, unrouted } = planBatchByCrane(
       multiLine,
       '1-11=6;A3=3;1-9=4;B4=5;',
       owners,
-      opts,
+      nsOpts,
     );
     expect(missing).toEqual([]);
     expect(unrouted).toEqual([]);
-    expect(groups).toHaveLength(2);
+    // Crane 6 + 7A share PLC_4 but each gets its OWN group/DB → 3 groups total.
+    expect(groups).toHaveLength(3);
 
-    const plc4 = groups.find((g) => g.connectionId === 'plc4')!;
-    expect(plc4.count).toBe(3);
-    // task 1 = 1-11 (station 2), task 2 = A3 (station 4), task 3 = 1-9 (station 3).
-    expect(plc4.writes[0]).toMatchObject({ value: 2, label: 'tasks[1].station' });
-    expect(plc4.writes[2]).toMatchObject({ value: 4, label: 'tasks[2].station' });
-    expect(plc4.writes[4]).toMatchObject({ value: 3, label: 'tasks[3].station' });
-    expect(plc4.writes[plc4.writes.length - 1]).toMatchObject({ value: 3, label: 'task_count' });
+    const c6 = groups.find((g) => g.crane === '6')!;
+    expect(c6).toMatchObject({ connectionId: 'plc4', plcName: 'PLC_4', db: 'Crane6Data', count: 2 });
+    // task 1 = 1-11 (station 2), task 2 = 1-9 (station 3), on Crane6Data.
+    expect(c6.writes[0]).toEqual({
+      nodeId: 'ns=3;s="Crane6Data"."tasks"[0]."station"',
+      dataType: 'Int16',
+      value: 2,
+      label: 'tasks[1].station',
+    });
+    expect(c6.writes[2]).toMatchObject({ value: 3, label: 'tasks[2].station' });
+    expect(c6.writes[c6.writes.length - 1]).toEqual({
+      nodeId: 'ns=3;s="Crane6Data"."task_count"',
+      dataType: 'Int16',
+      value: 2,
+      label: 'task_count',
+    });
 
-    const plc6 = groups.find((g) => g.connectionId === 'plc6')!;
-    expect(plc6.count).toBe(1);
-    // B4 renumbers to tasks[1] on its own PLC (station 5, dwell 5).
-    expect(plc6.writes[0]).toMatchObject({ value: 5, label: 'tasks[1].station' });
-    expect(plc6.writes[1]).toMatchObject({ value: 5, label: 'tasks[1].dwell_s' });
-    expect(plc6.writes[2]).toMatchObject({ value: 1, label: 'task_count' });
+    const c7a = groups.find((g) => g.crane === '7A')!;
+    expect(c7a).toMatchObject({ connectionId: 'plc4', db: 'Crane7AData', count: 1 });
+    expect(c7a.writes[0]).toMatchObject({
+      nodeId: 'ns=3;s="Crane7AData"."tasks"[0]."station"',
+      value: 4,
+    });
+
+    const c7b = groups.find((g) => g.crane === '7B')!;
+    expect(c7b).toMatchObject({ connectionId: 'plc6', plcName: 'PLC_6', db: 'Crane7BData', count: 1 });
+    expect(c7b.writes[0]).toMatchObject({ value: 5, label: 'tasks[1].station' });
+    expect(c7b.writes[1]).toMatchObject({ value: 5, label: 'tasks[1].dwell_s' });
   });
 
   it('collects tasks whose crane has no PLC as `unrouted` (config gap)', () => {
     const partial: CraneOwner[] = [{ connectionId: 'plc4', name: 'PLC_4', cranes: ['6'] }];
-    const { groups, unrouted } = planBatchByConnection(multiLine, '1-11=6;A3=3;B4=5;', partial, opts);
+    const { groups, unrouted } = planBatchByCrane(multiLine, '1-11=6;A3=3;B4=5;', partial, nsOpts);
     // Only 1-11 (crane 6) routes; A3 (7A) and B4 (7B) are unrouted.
     expect(groups).toHaveLength(1);
+    expect(groups[0]!.crane).toBe('6');
     expect(unrouted).toEqual([
       { key: 'A3', crane: '7A' },
       { key: 'B4', crane: '7B' },
@@ -152,18 +178,18 @@ describe('planBatchByConnection', () => {
   });
 
   it('collects unresolved keys as `missing`', () => {
-    const { missing } = planBatchByConnection(multiLine, '1-11=6;9-9=3;', owners, opts);
+    const { missing } = planBatchByCrane(multiLine, '1-11=6;9-9=3;', owners, nsOpts);
     expect(missing).toEqual(['9-9']);
   });
 
-  it(`rejects when a single PLC would exceed ${MAX_TASKS} tasks`, () => {
+  it(`rejects when a single crane would exceed ${MAX_TASKS} tasks`, () => {
     const tooMany = Array.from({ length: MAX_TASKS + 1 }, (_, i) => `1-11=${i + 1}`).join(';');
-    expect(() => planBatchByConnection(multiLine, tooMany, owners, opts)).toThrow(
+    expect(() => planBatchByCrane(multiLine, tooMany, owners, nsOpts)).toThrow(
       new RegExp(`at most ${MAX_TASKS}`),
     );
   });
 
   it('rejects an empty recipe', () => {
-    expect(() => planBatchByConnection(multiLine, ';;', owners, opts)).toThrow(/no tasks/i);
+    expect(() => planBatchByCrane(multiLine, ';;', owners, nsOpts)).toThrow(/no tasks/i);
   });
 });

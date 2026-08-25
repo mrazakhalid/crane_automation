@@ -78,8 +78,18 @@ export const sendBatchSchema = z.strictObject({
 export type SendBatchInput = z.infer<typeof sendBatchSchema>;
 
 /**
- * Optional `?connectionId=` on the per-PLC read/ack endpoints (batch-status,
- * batch-ack, crane-view). Omitted → the legacy active slot; a UUID → that PLC.
+ * Optional query on the per-PLC read/ack endpoints (batch-status, batch-ack,
+ * crane-view). `connectionId` picks the PLC (omitted → the legacy active slot);
+ * `crane` picks that PLC's crane DB `Crane<ID>Data` (omitted → the env default DB).
  */
-export const connectionQuerySchema = z.strictObject({ connectionId: z.uuid().optional() });
+export const connectionQuerySchema = z.strictObject({
+  connectionId: z.uuid().optional(),
+  crane: z
+    .string()
+    .trim()
+    .min(1)
+    .max(10)
+    .regex(/^[A-Za-z0-9-]+$/, 'Crane code: letters, numbers, hyphen only')
+    .optional(),
+});
 export type ConnectionQuery = z.infer<typeof connectionQuerySchema>;

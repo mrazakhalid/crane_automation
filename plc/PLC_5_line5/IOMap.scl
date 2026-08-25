@@ -1,0 +1,57 @@
+// ============================================================================
+//  IOMap  —  PLC_5 (Line 5, cranes 8 & 9)  —  real %I/%Q ↔ crane DB mirrors
+//  FUNCTION (FC), SCL, return Void, no params. Call FIRST in OB1.
+//  Addresses from docs/plc/plant-panel-layout.md (PLC_5). Station = tank.number + 1.
+// ============================================================================
+
+// ============================ CRANE 8  (Crane8Data) — DOWNSTREAM =============
+"Crane8Data".ls_mid    := %I4.3;      // LS_Mid_C8
+"Crane8Data".ls_up     := %I4.4;      // LS_Up_C8
+"Crane8Data".ls_dip    := %I4.5;      // LS_Down_C8
+"Crane8Data".estop     := %I4.0;      // E-Stop_SW_C8
+"Crane8Data".auto      := %I4.1;      // Auto_SW_C8
+"Crane8Data".btn_start := %I5.0;      // UP_Pendant_C8
+"Crane8Data".ls_at[0]  := %I5.2;      // PRK-5A_C8 (parking)
+// TODO — crane 8 is downstream (no LOAD/TRVL switch in its panel); set the pickup switch:
+//   "Crane8Data".ls_at[1] := %I?.?;   // transfer pickup (Loading)
+"Crane8Data".ls_at[2]  := %I5.3;      // 5-2_C8
+"Crane8Data".ls_at[3]  := %I5.4;      // INS-5A_C8
+"Crane8Data".ls_at[4]  := %I5.5;      // 5-3_C8
+"Crane8Data".ls_at[5]  := %I5.6;      // INS-5B_C8
+"Crane8Data".ls_at[6]  := %I5.7;      // 5-1_C8
+"Crane8Data".ls_at[7]  := %I6.0;      // INS-5C_C8
+"Crane8Data".ls_at[8]  := %I6.1;      // 5-4_C8
+"Crane8Data".ls_at[9]  := %I6.2;      // 5-5_C8
+%Q1.6 := "Crane8Data".mv_up;          // R-Up_C8
+%Q1.7 := "Crane8Data".mv_down;        // R-Down_C8
+%Q2.0 := "Crane8Data".mv_fwd;         // R-East_C8
+%Q2.1 := "Crane8Data".mv_rev;         // R-West_C8
+%Q2.2 := "Crane8Data".mv_up OR "Crane8Data".mv_down;     // R-Hoist_C8
+%Q2.3 := "Crane8Data".mv_fwd OR "Crane8Data".mv_rev;     // R-Trolley_C8
+
+// ============================ CRANE 9  (Crane9Data) — ENTRY crane ============
+"Crane9Data".ls_mid    := %I0.3;      // LS_Mid_C9
+"Crane9Data".ls_up     := %I0.4;      // LS_Up_C9
+"Crane9Data".ls_dip    := %I0.5;      // LS_Down_C9
+"Crane9Data".estop     := %I0.0;      // E-Stop_SW_C9
+"Crane9Data".auto      := %I0.1;      // Auto_SW_C9
+"Crane9Data".btn_start := %I1.0;      // UP_Pendant_C9
+"Crane9Data".ls_at[0]  := %I2.7;      // PRK-5B_C9 (parking)
+"Crane9Data".ls_at[1]  := %I1.2;      // LOAD-5A_C9 (Loading; LOAD-5B/5C/5D = I1.3/1.4/1.5)
+"Crane9Data".ls_at[10] := %I1.6;      // DRY-5A_C9
+"Crane9Data".ls_at[11] := %I1.7;      // 5-12_C9
+"Crane9Data".ls_at[12] := %I2.0;      // INS-5E_C9
+"Crane9Data".ls_at[13] := %I2.1;      // 5-11_C9
+"Crane9Data".ls_at[14] := %I2.2;      // 5-10_C9
+"Crane9Data".ls_at[15] := %I2.3;      // 5-9_C9
+"Crane9Data".ls_at[16] := %I2.4;      // INS-5D_C9
+"Crane9Data".ls_at[17] := %I2.5;      // 5-8_C9
+"Crane9Data".ls_at[18] := %I2.6;      // 5-7_C9
+"Crane9Data".ls_at[19] := %I3.0;      // 5-6_C9
+"Crane9Data".ls_at[20] := %I3.1;      // TRVL-5A_C9
+%Q0.4 := "Crane9Data".mv_up;          // R-Up_C9
+%Q0.5 := "Crane9Data".mv_down;        // R-Down_C9
+%Q0.6 := "Crane9Data".mv_fwd;         // R-East_C9
+%Q0.7 := "Crane9Data".mv_rev;         // R-West_C9
+%Q1.0 := "Crane9Data".mv_up OR "Crane9Data".mv_down;     // R-Hoist_C9
+%Q1.1 := "Crane9Data".mv_fwd OR "Crane9Data".mv_rev;     // R-Trolley_C9

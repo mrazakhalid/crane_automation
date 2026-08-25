@@ -1,0 +1,53 @@
+// ============================================================================
+//  IOMap  —  PLC_1 (Line 1, cranes 1A & 1B)  —  real %I/%Q ↔ crane DB mirrors
+//  FUNCTION (FC), SCL, return Void, no params. Call FIRST in OB1.
+//  Addresses from docs/plc/plant-panel-layout.md (PLC_1). Station = tank.number + 1.
+// ============================================================================
+
+// ============================ CRANE 1A  (Crane1AData) — ENTRY crane ==========
+"Crane1AData".ls_mid    := %I0.3;     // LS_Mid_C1A
+"Crane1AData".ls_up     := %I0.4;     // LS_Up_C1A
+"Crane1AData".ls_dip    := %I0.5;     // LS_Down_C1A
+"Crane1AData".estop     := %I0.0;     // E-Stop_SW_C1A
+"Crane1AData".auto      := %I0.1;     // Auto_SW_C1A
+"Crane1AData".btn_start := %I1.0;     // UP_Pendant_C1A
+"Crane1AData".ls_at[0]  := %I2.6;     // PRK-1B_C1A  (parking — VERIFY: PRK naming is cross-referenced)
+"Crane1AData".ls_at[1]  := %I1.2;     // LOAD-1A_C1A (Loading; LOAD-1B/1C/1D = I1.3/1.4/1.5 extra bays)
+"Crane1AData".ls_at[2]  := %I1.6;     // 2-1A_C1A
+"Crane1AData".ls_at[3]  := %I1.7;     // 2-1B_C1A
+"Crane1AData".ls_at[4]  := %I2.0;     // 2-2_C1A
+"Crane1AData".ls_at[5]  := %I2.1;     // INS-1A_C1A
+"Crane1AData".ls_at[6]  := %I2.2;     // 2-3_C1A
+"Crane1AData".ls_at[7]  := %I2.3;     // 2-4A_C1A
+"Crane1AData".ls_at[8]  := %I2.4;     // 2-4B_C1A
+"Crane1AData".ls_at[9]  := %I2.5;     // 2-5_C1A
+"Crane1AData".ls_at[10] := %I2.7;     // 14-3_C1A
+"Crane1AData".ls_at[11] := %I3.0;     // TRVL-1A_C1A
+%Q0.4 := "Crane1AData".mv_up;         // R-Up_C1A
+%Q0.5 := "Crane1AData".mv_down;       // R-Down_C1A
+%Q0.6 := "Crane1AData".mv_fwd;        // R-East_C1A
+%Q0.7 := "Crane1AData".mv_rev;        // R-West_C1A
+%Q1.0 := "Crane1AData".mv_up OR "Crane1AData".mv_down;    // R-Hoist_C1A   (hoist enable)
+%Q1.1 := "Crane1AData".mv_fwd OR "Crane1AData".mv_rev;    // R-Trolley_C1A (trolley enable)
+
+// ============================ CRANE 1B  (Crane1BData) — DOWNSTREAM ===========
+"Crane1BData".ls_mid    := %I4.3;     // LS_Mid_C1B
+"Crane1BData".ls_up     := %I4.4;     // LS_Up_C1B
+"Crane1BData".ls_dip    := %I4.5;     // LS_Down_C1B
+"Crane1BData".estop     := %I4.0;     // E-Stop_SW_C1B
+"Crane1BData".auto      := %I4.1;     // Auto_SW_C1B
+"Crane1BData".btn_start := %I5.0;     // UP_Pendant_C1B
+"Crane1BData".ls_at[0]  := %I5.2;     // PRK-1A_C1B (parking — VERIFY)
+// TODO — 1B is downstream (no LOAD, no local TRVL switch in its panel). Set the
+// transfer-pickup switch it stops at to collect from TRVL-1A, then map Loading:
+//   "Crane1BData".ls_at[1] := %I?.?;   // transfer pickup (Loading)
+"Crane1BData".ls_at[12] := %I5.3;     // 7-1_C1B
+"Crane1BData".ls_at[13] := %I5.4;     // 7-2_C1B
+"Crane1BData".ls_at[14] := %I5.5;     // 14-2_C1B
+"Crane1BData".ls_at[15] := %I5.6;     // 14-1_C1B
+%Q1.6 := "Crane1BData".mv_up;         // R-Up_C1B
+%Q1.7 := "Crane1BData".mv_down;       // R-Down_C1B
+%Q2.0 := "Crane1BData".mv_fwd;        // R-East_C1B
+%Q2.1 := "Crane1BData".mv_rev;        // R-West_C1B
+%Q2.2 := "Crane1BData".mv_up OR "Crane1BData".mv_down;    // R-Hoist_C1B
+%Q2.3 := "Crane1BData".mv_fwd OR "Crane1BData".mv_rev;    // R-Trolley_C1B

@@ -79,28 +79,33 @@ function connectionIdQuery(req: Request): string | undefined {
   return typeof req.query.connectionId === 'string' ? req.query.connectionId : undefined;
 }
 
-/** GET /api/plc/batch-status[?connectionId=] — read one PLC's run handshake. Returns 200 `{ busy, done, step }`. */
+/** Read the optional `?crane=` query (a crane's DB `Crane<ID>Data`), or undefined for the default DB. */
+function craneQuery(req: Request): string | undefined {
+  return typeof req.query.crane === 'string' ? req.query.crane : undefined;
+}
+
+/** GET /api/plc/batch-status[?connectionId=&crane=] — read one crane's run handshake. Returns 200 `{ busy, done, step }`. */
 export async function getBatch(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    res.status(200).json(await getBatchStatus(connectionIdQuery(req)));
+    res.status(200).json(await getBatchStatus(connectionIdQuery(req), craneQuery(req)));
   } catch (err) {
     next(err);
   }
 }
 
-/** POST /api/plc/batch-ack[?connectionId=] — clear `cmd_send` on one PLC. Returns 200 with fresh status. */
+/** POST /api/plc/batch-ack[?connectionId=&crane=] — clear `cmd_send` on one crane. Returns 200 with fresh status. */
 export async function postBatchAck(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    res.status(200).json(await ackBatch(connectionIdQuery(req)));
+    res.status(200).json(await ackBatch(connectionIdQuery(req), craneQuery(req)));
   } catch (err) {
     next(err);
   }
 }
 
-/** GET /api/plc/crane-view[?connectionId=] — live crane snapshot for the visualizer. Returns 200 `CraneView`. */
+/** GET /api/plc/crane-view[?connectionId=&crane=] — live crane snapshot for the visualizer. Returns 200 `CraneView`. */
 export async function getCrane(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    res.status(200).json(await getCraneView(connectionIdQuery(req)));
+    res.status(200).json(await getCraneView(connectionIdQuery(req), craneQuery(req)));
   } catch (err) {
     next(err);
   }
