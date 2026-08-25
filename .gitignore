@@ -25,3 +25,6 @@ Thumbs.db
 
 # Local Claude Code settings (personal, machine-specific)
 .claude/settings.local.json
+
+# Desktop (Electron) app — excluded from the repo
+/desktop/
