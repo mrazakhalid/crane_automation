@@ -21,7 +21,21 @@ const POLL_PATHS = new Set([
   '/api/plc/state',
   '/api/plc/batch-status',
   '/api/plc/crane-view',
+  '/api/plc/plant-view',
+  '/api/plc/logs',
 ]);
+
+/**
+ * Should this request be exempt from the global cap? Every authenticated
+ * `GET /api/plc/*` is a live read the UI polls at ~1 Hz (state, plant-view,
+ * crane-view, logs, batch-status, read); counting them would exhaust the cap in
+ * minutes and 429 every other route. They require auth, so exempting reads does
+ * not widen the abuse surface. Writes (POST/DELETE) are still counted.
+ */
+function isLivePoll(method: string, path: string): boolean {
+  if (POLL_PATHS.has(path)) return true;
+  return method === 'GET' && path.startsWith('/api/plc/');
+}
 
 /**
  * Global safety-net limiter for all routes except the live-poll endpoints.
@@ -34,7 +48,7 @@ export function createGlobalLimiter(): RateLimitRequestHandler {
     limit: 600,
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => POLL_PATHS.has(req.path),
+    skip: (req) => isLivePoll(req.method, req.path),
     message: { error: 'Too many requests. Please slow down and try again shortly.' },
   });
 }

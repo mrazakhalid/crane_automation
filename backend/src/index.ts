@@ -9,6 +9,7 @@ import { ensureUserIndexes } from './repositories/user.repository.js';
 import { seedConnectionFromEnv } from './services/plc-config.service.js';
 import { autoConnectActivePlc, autoConnectAllPlcs } from './services/plc/plc.service.js';
 import { seedSuperAdmin } from './services/seed.js';
+import { seedPlantLayout } from './services/seed-plant.js';
 
 /**
  * Server entry point.
@@ -27,6 +28,9 @@ async function main(): Promise<void> {
   const created = await seedSuperAdmin();
   if (created) {
     console.log(`👑 Seeded super-admin "${env.SEED_ADMIN_USERNAME}" (change the password!)`);
+  }
+  if (await seedPlantLayout()) {
+    console.log('🏭 Seeded default plant layout (5 lines + 6 PLC connections)');
   }
   if (await seedConnectionFromEnv()) {
     console.log('🔧 Seeded active PLC connection from .env defaults (edit it in PLC Manager)');

@@ -11,8 +11,7 @@
 "Crane4Data".estop     := %I0.0;      // E-Stop_SW_C4
 "Crane4Data".auto      := %I0.1;      // Auto_SW_C4
 "Crane4Data".btn_start := %I2.2;      // UP_Pendant_C4
-// TODO — crane 4 has no PRK switch in its panel; set its home sensor:
-//   "Crane4Data".ls_at[0] := %I?.?;   // Parking
+"Crane4Data".ls_at[0]  := %I1.7;      // PRK-3A     (Parking — crane 4 home; panel labels it PRK-3A, no _C4 suffix)
 "Crane4Data".ls_at[1]  := %I1.5;      // TRVL-3A_C4 (Loading = transfer pickup, downstream crane)
 "Crane4Data".ls_at[2]  := %I0.7;      // 1-16_C4
 "Crane4Data".ls_at[3]  := %I1.0;      // 1-15_C4
@@ -24,8 +23,8 @@
 "Crane4Data".ls_at[9]  := %I1.6;      // 15-2_C4
 %Q0.4 := "Crane4Data".mv_up;          // R-Up_C4
 %Q0.5 := "Crane4Data".mv_down;        // R-Down_C4
-%Q0.6 := "Crane4Data".mv_fwd;         // R-East_C4
-%Q0.7 := "Crane4Data".mv_rev;         // R-West_C4
+%Q0.6 := "Crane4Data".mv_rev;         // R-East_C4
+%Q0.7 := "Crane4Data".mv_fwd;         // R-West_C4
 %Q1.0 := "Crane4Data".mv_up OR "Crane4Data".mv_down;     // R-Hoist_C4
 %Q1.1 := "Crane4Data".mv_fwd OR "Crane4Data".mv_rev;     // R-Trolley_C4
 
@@ -50,7 +49,7 @@
 "Crane5Data".ls_at[19] := %I7.0;      // TRVL-3B_C5
 %Q2.4 := "Crane5Data".mv_up;          // R-Up_C5
 %Q2.5 := "Crane5Data".mv_down;        // R-Down_C5
-%Q2.6 := "Crane5Data".mv_fwd;         // R-East_C5
-%Q2.7 := "Crane5Data".mv_rev;         // R-West_C5
+%Q2.6 := "Crane5Data".mv_rev;         // R-East_C5
+%Q2.7 := "Crane5Data".mv_fwd;         // R-West_C5
 %Q3.0 := "Crane5Data".mv_up OR "Crane5Data".mv_down;     // R-Hoist_C5
 %Q3.1 := "Crane5Data".mv_fwd OR "Crane5Data".mv_rev;     // R-Trolley_C5

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar.js';
+import { ProcessProvider } from '../context/ProcessProvider.js';
 
 const COLLAPSE_KEY = 'crane.sidebar.collapsed';
 
@@ -26,7 +27,10 @@ export function AppLayout() {
     <div className={`app-shell${collapsed ? ' app-shell--collapsed' : ''}`}>
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
       <main className="workspace">
-        <Outlet />
+        {/* ProcessProvider lives here (not inside a page) so the run survives page switches. */}
+        <ProcessProvider>
+          <Outlet />
+        </ProcessProvider>
       </main>
     </div>
   );

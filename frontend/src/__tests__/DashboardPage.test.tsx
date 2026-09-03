@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ToastProvider } from '../components/ToastProvider.js';
 import { AuthContext, type AuthContextValue } from '../context/auth-context.js';
+import { ProcessProvider } from '../context/ProcessProvider.js';
 import { DashboardPage } from '../pages/DashboardPage.js';
 import type { Role, User } from '../types/auth.js';
 
@@ -35,7 +36,9 @@ function renderDashboard(role: Role) {
   render(
     <ToastProvider>
       <AuthContext.Provider value={value}>
-        <DashboardPage />
+        <ProcessProvider>
+          <DashboardPage />
+        </ProcessProvider>
       </AuthContext.Provider>
     </ToastProvider>,
   );

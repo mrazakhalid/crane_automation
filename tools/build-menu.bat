@@ -26,6 +26,7 @@ echo   [3] Build backend only   (tsc)
 echo   [4] Run desktop app      (electron .  - dev shell)
 echo   [5] Install desktop deps (npm install in desktop\)
 echo   [6] Open release folder  (desktop\release)
+echo   [7] Commit changes       (git add -A ^&^& git commit -m "...")
 echo.
 echo   [0] Exit
 echo.
@@ -38,6 +39,7 @@ if "%choice%"=="3" goto be
 if "%choice%"=="4" goto run
 if "%choice%"=="5" goto deps
 if "%choice%"=="6" goto open
+if "%choice%"=="7" goto commit
 if "%choice%"=="0" goto end
 echo.
 echo   Invalid choice: "%choice%"
@@ -73,6 +75,21 @@ goto after
 echo.
 echo === Install desktop deps ===
 pushd "%ROOT%\desktop" && call npm install & popd
+goto after
+
+:commit
+echo.
+echo === Commit changes ===
+git -C "%ROOT%" status --short
+echo.
+set "msg="
+set /p "msg=Enter commit message (blank to cancel): "
+if not defined msg (
+  echo Cancelled - no message entered.
+  goto after
+)
+git -C "%ROOT%" add -A
+git -C "%ROOT%" commit -m "%msg%"
 goto after
 
 :open

@@ -16,6 +16,7 @@
 "Crane1AData".ls_at[2]  := %I1.6;     // 2-1A_C1A
 "Crane1AData".ls_at[3]  := %I1.7;     // 2-1B_C1A
 "Crane1AData".ls_at[4]  := %I2.0;     // 2-2_C1A
+
 "Crane1AData".ls_at[5]  := %I2.1;     // INS-1A_C1A
 "Crane1AData".ls_at[6]  := %I2.2;     // 2-3_C1A
 "Crane1AData".ls_at[7]  := %I2.3;     // 2-4A_C1A
@@ -25,8 +26,8 @@
 "Crane1AData".ls_at[11] := %I3.0;     // TRVL-1A_C1A
 %Q0.4 := "Crane1AData".mv_up;         // R-Up_C1A
 %Q0.5 := "Crane1AData".mv_down;       // R-Down_C1A
-%Q0.6 := "Crane1AData".mv_fwd;        // R-East_C1A
-%Q0.7 := "Crane1AData".mv_rev;        // R-West_C1A
+%Q0.6 := "Crane1AData".mv_rev;        // R-East_C1A
+%Q0.7 := "Crane1AData".mv_fwd;        // R-West_C1A
 %Q1.0 := "Crane1AData".mv_up OR "Crane1AData".mv_down;    // R-Hoist_C1A   (hoist enable)
 %Q1.1 := "Crane1AData".mv_fwd OR "Crane1AData".mv_rev;    // R-Trolley_C1A (trolley enable)
 
@@ -38,8 +39,10 @@
 "Crane1BData".auto      := %I4.1;     // Auto_SW_C1B
 "Crane1BData".btn_start := %I5.0;     // UP_Pendant_C1B
 "Crane1BData".ls_at[0]  := %I5.2;     // PRK-1A_C1B (parking — VERIFY)
-// TODO — 1B is downstream (no LOAD, no local TRVL switch in its panel). Set the
-// transfer-pickup switch it stops at to collect from TRVL-1A, then map Loading:
+// TODO (field decision) — 1B is downstream and collects at TRVL-1A, but Panel_1
+// wires TRVL-1A only on crane 1A's card (%I3.0), with NO pickup switch on 1B's
+// input card. Options: (a) cross-wire TRVL-1A into a spare 1B input, or (b) add a
+// dedicated 1B pickup switch. Then map it here:
 //   "Crane1BData".ls_at[1] := %I?.?;   // transfer pickup (Loading)
 "Crane1BData".ls_at[12] := %I5.3;     // 7-1_C1B
 "Crane1BData".ls_at[13] := %I5.4;     // 7-2_C1B
@@ -47,7 +50,7 @@
 "Crane1BData".ls_at[15] := %I5.6;     // 14-1_C1B
 %Q1.6 := "Crane1BData".mv_up;         // R-Up_C1B
 %Q1.7 := "Crane1BData".mv_down;       // R-Down_C1B
-%Q2.0 := "Crane1BData".mv_fwd;        // R-East_C1B
-%Q2.1 := "Crane1BData".mv_rev;        // R-West_C1B
+%Q2.0 := "Crane1BData".mv_rev;        // R-East_C1B
+%Q2.1 := "Crane1BData".mv_fwd;        // R-West_C1B
 %Q2.2 := "Crane1BData".mv_up OR "Crane1BData".mv_down;    // R-Hoist_C1B
 %Q2.3 := "Crane1BData".mv_fwd OR "Crane1BData".mv_rev;    // R-Trolley_C1B

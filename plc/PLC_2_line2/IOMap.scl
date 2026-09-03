@@ -12,8 +12,7 @@
 "Crane2Data".auto      := %I4.1;      // Auto_SW_C2
 "Crane2Data".btn_start := %I5.0;      // UP_Pendant_C2
 "Crane2Data".ls_at[0]  := %I5.2;      // PRK-2A_C2 (parking)
-// TODO — crane 2 is downstream (no LOAD/TRVL switch in its panel); set the pickup switch:
-//   "Crane2Data".ls_at[1] := %I?.?;   // transfer pickup (Loading)
+"Crane2Data".ls_at[1]  := %I6.0;      // 4-6A_C2 (Loading = transfer pickup; same switch as station 7)
 "Crane2Data".ls_at[2]  := %I5.3;      // 15-3_C2
 "Crane2Data".ls_at[3]  := %I5.4;      // 4-7_C2
 "Crane2Data".ls_at[4]  := %I5.5;      // 4-9_C2
@@ -22,8 +21,8 @@
 "Crane2Data".ls_at[7]  := %I6.0;      // 4-6A_C2
 %Q1.6 := "Crane2Data".mv_up;          // R-Up_C2
 %Q1.7 := "Crane2Data".mv_down;        // R-Down_C2
-%Q2.0 := "Crane2Data".mv_fwd;         // R-East_C2
-%Q2.1 := "Crane2Data".mv_rev;         // R-West_C2
+%Q2.0 := "Crane2Data".mv_rev;         // R-East_C2
+%Q2.1 := "Crane2Data".mv_fwd;         // R-West_C2
 %Q2.2 := "Crane2Data".mv_up OR "Crane2Data".mv_down;     // R-Hoist_C2
 %Q2.3 := "Crane2Data".mv_fwd OR "Crane2Data".mv_rev;     // R-Trolley_C2
 
@@ -49,7 +48,7 @@
 "Crane3Data".ls_at[18] := %I3.1;      // TRVL-2A_C3
 %Q0.4 := "Crane3Data".mv_up;          // R-Up_C3
 %Q0.5 := "Crane3Data".mv_down;        // R-Down_C3
-%Q0.6 := "Crane3Data".mv_fwd;         // R-East_C3
-%Q0.7 := "Crane3Data".mv_rev;         // R-West_C3
+%Q0.6 := "Crane3Data".mv_rev;         // R-East_C3
+%Q0.7 := "Crane3Data".mv_fwd;         // R-West_C3
 %Q1.0 := "Crane3Data".mv_up OR "Crane3Data".mv_down;     // R-Hoist_C3
 %Q1.1 := "Crane3Data".mv_fwd OR "Crane3Data".mv_rev;     // R-Trolley_C3

@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, Cpu, Loader, Play, ServerOff, Square } from 'lucide-react';
+import { CheckCircle2, Circle, Cpu, Loader, Play, SendHorizontal, ServerOff, Square } from 'lucide-react';
 import { Spinner } from './Spinner.js';
 import type { ProcessPlan, RunStatus, RunTaskState } from '../types/process.js';
 
@@ -23,7 +23,9 @@ export function ProcessSummary({
   status,
   running,
   starting,
+  sending,
   stateForStep,
+  onSendToPlc,
   onStart,
   onStop,
 }: {
@@ -31,12 +33,15 @@ export function ProcessSummary({
   status: RunStatus | null;
   running: boolean;
   starting: boolean;
+  sending: boolean;
   stateForStep: (step: number) => RunTaskState;
+  onSendToPlc: () => void;
   onStart: () => void;
   onStop: () => void;
 }) {
   const { counts, groups } = plan;
   const pct = Math.round((status?.progress ?? 0) * 100);
+  const canSend = groups.some((g) => g.connectionId);
 
   return (
     <div className="process-summary">
@@ -49,18 +54,28 @@ export function ProcessSummary({
           {counts.missing > 0 && <span className="chip chip--bad">{counts.missing} missing</span>}
         </div>
         <div className="process-banner__actions">
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={onSendToPlc}
+            disabled={sending || !canSend}
+            title={canSend ? 'Write the tasks to the real PLC(s) and run — watch it on the Plant view' : 'No crane on these tasks is assigned to a connected PLC'}
+          >
+            {sending ? <Spinner label="Sending" /> : (<><SendHorizontal size={16} aria-hidden /> Send to PLC</>)}
+          </button>
           {running ? (
             <button type="button" className="btn btn--danger" onClick={onStop}>
-              <Square size={16} aria-hidden /> Stop
+              <Square size={16} aria-hidden /> Stop preview
             </button>
           ) : (
             <button
               type="button"
-              className="btn btn--primary"
+              className="btn"
               onClick={onStart}
               disabled={starting || groups.length === 0}
+              title="Timed preview only — does NOT touch the PLC"
             >
-              {starting ? <Spinner label="Starting" /> : (<><Play size={16} aria-hidden /> Start process</>)}
+              {starting ? <Spinner label="Starting" /> : (<><Play size={16} aria-hidden /> Preview (sim)</>)}
             </button>
           )}
         </div>
@@ -84,12 +99,17 @@ export function ProcessSummary({
             {g.cranes.map((chain) => (
               <div key={chain.crane} className="chain">
                 <div className="chain__crane">Crane {chain.crane}</div>
+                <div className="chain__cols" aria-hidden>
+                  <span>Tank</span>
+                  <span>Time</span>
+                </div>
                 <ol className="chain__tasks">
                   {chain.tasks.map((t) => (
                     <li key={t.step} className={`chain__task chain__task--${stateForStep(t.step)}`}>
                       <StateIcon state={stateForStep(t.step)} />
                       <span className="chain__tank">{t.tankName}</span>
-                      <span className="muted chain__meta">station {t.station} · {t.time}s</span>
+                      {/* Station hidden for now (t.station) — show Tank + Time only. */}
+                      <span className="muted chain__meta">{t.time}s</span>
                     </li>
                   ))}
                 </ol>

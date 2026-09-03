@@ -12,8 +12,7 @@
 "Crane8Data".auto      := %I4.1;      // Auto_SW_C8
 "Crane8Data".btn_start := %I5.0;      // UP_Pendant_C8
 "Crane8Data".ls_at[0]  := %I5.2;      // PRK-5A_C8 (parking)
-// TODO — crane 8 is downstream (no LOAD/TRVL switch in its panel); set the pickup switch:
-//   "Crane8Data".ls_at[1] := %I?.?;   // transfer pickup (Loading)
+"Crane8Data".ls_at[1]  := %I6.2;      // 5-5_C8 (Loading = transfer pickup; same switch as station 9)
 "Crane8Data".ls_at[2]  := %I5.3;      // 5-2_C8
 "Crane8Data".ls_at[3]  := %I5.4;      // INS-5A_C8
 "Crane8Data".ls_at[4]  := %I5.5;      // 5-3_C8
@@ -24,8 +23,8 @@
 "Crane8Data".ls_at[9]  := %I6.2;      // 5-5_C8
 %Q1.6 := "Crane8Data".mv_up;          // R-Up_C8
 %Q1.7 := "Crane8Data".mv_down;        // R-Down_C8
-%Q2.0 := "Crane8Data".mv_fwd;         // R-East_C8
-%Q2.1 := "Crane8Data".mv_rev;         // R-West_C8
+%Q2.0 := "Crane8Data".mv_rev;         // R-East_C8
+%Q2.1 := "Crane8Data".mv_fwd;         // R-West_C8
 %Q2.2 := "Crane8Data".mv_up OR "Crane8Data".mv_down;     // R-Hoist_C8
 %Q2.3 := "Crane8Data".mv_fwd OR "Crane8Data".mv_rev;     // R-Trolley_C8
 
@@ -51,7 +50,7 @@
 "Crane9Data".ls_at[20] := %I3.1;      // TRVL-5A_C9
 %Q0.4 := "Crane9Data".mv_up;          // R-Up_C9
 %Q0.5 := "Crane9Data".mv_down;        // R-Down_C9
-%Q0.6 := "Crane9Data".mv_fwd;         // R-East_C9
-%Q0.7 := "Crane9Data".mv_rev;         // R-West_C9
+%Q0.6 := "Crane9Data".mv_rev;         // R-East_C9
+%Q0.7 := "Crane9Data".mv_fwd;         // R-West_C9
 %Q1.0 := "Crane9Data".mv_up OR "Crane9Data".mv_down;     // R-Hoist_C9
 %Q1.1 := "Crane9Data".mv_fwd OR "Crane9Data".mv_rev;     // R-Trolley_C9

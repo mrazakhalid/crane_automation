@@ -402,6 +402,27 @@ export async function ackBatch(
   return getBatchStatus(connectionId, crane);
 }
 
+/**
+ * Read one loaded task's target station from a crane's DB.
+ *
+ * Purpose: Let the plant view resolve "current tank / next tank" — the crane's
+ *   `sts_step` indexes into its loaded `tasks[]`, so reading `tasks[step].station`
+ *   (then mapping station → tank via the line) shows what the recipe is doing now.
+ * Args: connectionId — the PLC session; crane — the crane's DB (omitted → env
+ *   default DB); taskNo — 1-based task index (`tasks[1..count]`).
+ * Returns: the station number, or 0 if the slot is empty/unreadable.
+ * Raises: 409 if not connected; 502 on an OPC UA read failure.
+ */
+export async function readTaskStation(
+  connectionId: string,
+  crane: string | undefined,
+  taskNo: number,
+): Promise<number> {
+  // Part of the ~1 Hz plant/crane poll → don't log (log = false).
+  const res = await readNode(taskFieldNode(taskNo, 'station', optsForCrane(crane)), connectionId, false);
+  return Number(res.value ?? 0);
+}
+
 /** Vertical hoist position derived from the limit switches / motor bits. */
 export type HoistPosition = 'up' | 'down' | 'moving' | 'mid';
 
@@ -440,20 +461,23 @@ export async function getCraneView(
   crane?: string,
 ): Promise<CraneView> {
   const o = optsForCrane(crane);
+  // This is the ~1 Hz animation poll — pass `log = false` so it doesn't flood the
+  // PLC I/O log (writes + command/handshake reads stay logged).
+  const poll = (nodeId: string) => readNode(nodeId, connectionId, false);
   const [state, step, busy, done, taskCount, lsDip, lsUp, mvFwd, mvRev, mvUp, mvDown, lsAtRes] =
     await Promise.all([
-      readNode(scalarNode('sts_state', o), connectionId),
-      readNode(scalarNode('sts_step', o), connectionId),
-      readNode(scalarNode('sts_busy', o), connectionId),
-      readNode(scalarNode('sts_done', o), connectionId),
-      readNode(scalarNode('task_count', o), connectionId),
-      readNode(scalarNode('ls_dip', o), connectionId),
-      readNode(scalarNode('ls_up', o), connectionId),
-      readNode(scalarNode('mv_fwd', o), connectionId),
-      readNode(scalarNode('mv_rev', o), connectionId),
-      readNode(scalarNode('mv_up', o), connectionId),
-      readNode(scalarNode('mv_down', o), connectionId),
-      readNode(scalarNode('ls_at', o), connectionId), // whole Bool array in one read
+      poll(scalarNode('sts_state', o)),
+      poll(scalarNode('sts_step', o)),
+      poll(scalarNode('sts_busy', o)),
+      poll(scalarNode('sts_done', o)),
+      poll(scalarNode('task_count', o)),
+      poll(scalarNode('ls_dip', o)),
+      poll(scalarNode('ls_up', o)),
+      poll(scalarNode('mv_fwd', o)),
+      poll(scalarNode('mv_rev', o)),
+      poll(scalarNode('mv_up', o)),
+      poll(scalarNode('mv_down', o)),
+      poll(scalarNode('ls_at', o)), // whole Bool array in one read
     ]);
 
   const rawLsAt = lsAtRes.value as unknown;

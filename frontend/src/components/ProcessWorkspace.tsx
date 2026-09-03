@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ProcessSummary } from './ProcessSummary.js';
 import { ProcessWarnings } from './ProcessWarnings.js';
 import { RecipeInput } from './RecipeInput.js';
-import { useProcess } from '../hooks/useProcess.js';
+import { useProcessContext } from '../context/ProcessProvider.js';
 import { useRecipes } from '../hooks/useRecipes.js';
 
 /**
@@ -16,7 +16,7 @@ import { useRecipes } from '../hooks/useRecipes.js';
  */
 export function ProcessWorkspace() {
   const recipesState = useRecipes();
-  const p = useProcess();
+  const p = useProcessContext();
   const [selectedRecipeId, setSelectedRecipeId] = useState('');
 
   /** Load a saved recipe (or reset to a blank "new recipe" workspace). */
@@ -32,6 +32,13 @@ export function ProcessWorkspace() {
     if (saved) setSelectedRecipeId(saved.id);
   }
 
+  /** Edit a saved recipe (name + data); reload it into the workspace if active. */
+  async function updateRecipe(id: string, patch: { name: string; qr: string }) {
+    const saved = await recipesState.update(id, patch);
+    if (saved && id === selectedRecipeId) p.loadRecipe(saved.qr, saved.overrides ?? {});
+    return saved;
+  }
+
   /** Delete a saved recipe; clear the selection if it was the active one. */
   async function deleteRecipe(id: string): Promise<void> {
     await recipesState.remove(id);
@@ -45,6 +52,7 @@ export function ProcessWorkspace() {
         recipesLoading={recipesState.loading}
         selectedRecipeId={selectedRecipeId}
         onSelectRecipe={selectRecipe}
+        onUpdateRecipe={updateRecipe}
         onDeleteRecipe={(id) => void deleteRecipe(id)}
         qr={p.qr}
         setQr={p.setQr}
@@ -63,7 +71,9 @@ export function ProcessWorkspace() {
             status={p.status}
             running={p.running}
             starting={p.starting}
+            sending={p.sending}
             stateForStep={p.stateForStep}
+            onSendToPlc={() => void p.sendToPlc()}
             onStart={() => void p.start()}
             onStop={() => void p.stop()}
           />

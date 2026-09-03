@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ToastProvider } from '../components/ToastProvider.js';
+import { ProcessProvider } from '../context/ProcessProvider.js';
 import { ProcessPage } from '../pages/ProcessPage.js';
 
 // A one-group plan: PLC_A runs crane 7A with a single task (tank 1-1A).
@@ -49,17 +50,25 @@ vi.mock('../utils/qr.js', () => ({ decodeQrFromFile: vi.fn() }));
 function renderPage() {
   return render(
     <ToastProvider>
-      <ProcessPage />
+      <ProcessProvider>
+        <ProcessPage />
+      </ProcessProvider>
     </ToastProvider>,
   );
+}
+
+/** Enter a one-tank recipe via the Tank / Time table (replaces the old textarea). */
+async function enterRecipe(tank: string, time: string) {
+  await userEvent.click(screen.getByRole('button', { name: /add task/i }));
+  await userEvent.type(screen.getByLabelText(/tank for row 1/i), tank);
+  await userEvent.type(screen.getByLabelText(/time in seconds for row 1/i), time);
 }
 
 describe('ProcessPage', () => {
   it('divides a pasted recipe and shows which PLC/crane gets the task', async () => {
     renderPage();
 
-    const textarea = await screen.findByPlaceholderText(/1-1A=60/i);
-    await userEvent.type(textarea, '1-1A=6');
+    await enterRecipe('1-1A', '6');
     await userEvent.click(screen.getByRole('button', { name: /divide tasks/i }));
 
     // The summary shows the routed PLC, its crane, and the tank.
@@ -67,18 +76,18 @@ describe('ProcessPage', () => {
     expect(screen.getByText(/Crane 7A/i)).toBeInTheDocument();
     expect(screen.getByText('1-1A')).toBeInTheDocument();
     expect(screen.getByText(/1 routed/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /start process/i })).toBeInTheDocument();
+    // The timed run is now the "Preview (sim)" button (does not touch the PLC).
+    expect(screen.getByRole('button', { name: /preview/i })).toBeInTheDocument();
   });
 
   it('starts a run and reflects the in-progress state', async () => {
     renderPage();
-    const textarea = await screen.findByPlaceholderText(/1-1A=60/i);
-    await userEvent.type(textarea, '1-1A=6');
+    await enterRecipe('1-1A', '6');
     await userEvent.click(screen.getByRole('button', { name: /divide tasks/i }));
     await screen.findByText('PLC_A');
 
-    await userEvent.click(screen.getByRole('button', { name: /start process/i }));
-    // Once started, a Stop control replaces Start and the task shows "in progress".
+    await userEvent.click(screen.getByRole('button', { name: /preview/i }));
+    // Once started, a Stop control replaces Preview and the task shows "in progress".
     expect(await screen.findByRole('button', { name: /stop/i })).toBeInTheDocument();
     expect(await screen.findByLabelText('in progress')).toBeInTheDocument();
   });

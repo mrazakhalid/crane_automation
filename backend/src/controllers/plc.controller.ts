@@ -7,6 +7,9 @@ import {
   sendCommand,
 } from '../services/plc/plc.service.js';
 import { ackBatch, getBatchStatus, getCraneView, sendBatch } from '../services/plc/batch.service.js';
+import { getPlantView } from '../services/plant-view.service.js';
+import { clear as clearPlcLog, getRecent } from '../services/plc/plc-log.js';
+import * as connRepo from '../repositories/plc-connection.repository.js';
 import type { CommandInput, ConnectInput, ReadQuery, SendBatchInput } from '../schemas/plc.schema.js';
 
 /**
@@ -23,6 +26,38 @@ export async function getState(_req: Request, res: Response, next: NextFunction)
   } catch (err) {
     next(err);
   }
+}
+
+/**
+ * GET /api/plc/logs?after=<seq> — the OPC UA I/O log (writes + command/handshake
+ * reads), each row resolved to its PLC name. `after` returns only newer entries.
+ */
+export async function getLogs(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const after = Number(req.query.after ?? 0) || 0;
+    const { entries, lastSeq } = getRecent(after, 500);
+    const conns = await connRepo.listAll();
+    const names = new Map(conns.map((c) => [c._id, c.name] as const));
+    const rows = entries.map((e) => ({
+      seq: e.seq,
+      ts: e.ts,
+      dir: e.dir,
+      plc: names.get(e.connectionId) ?? '(active)',
+      variable: e.nodeId.replace(/^ns=\d+;s=/, '').replace(/"/g, ''),
+      value: e.value,
+      ok: e.ok,
+      error: e.error ?? null,
+    }));
+    res.status(200).json({ entries: rows, lastSeq });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** DELETE /api/plc/logs — clear the in-memory I/O log. */
+export function deleteLogs(_req: Request, res: Response): void {
+  clearPlcLog();
+  res.status(204).end();
 }
 
 /** POST /api/plc/connect — open a session (super-admin). Returns 200 `{ connection }`. */
@@ -106,6 +141,15 @@ export async function postBatchAck(req: Request, res: Response, next: NextFuncti
 export async function getCrane(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     res.status(200).json(await getCraneView(connectionIdQuery(req), craneQuery(req)));
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** GET /api/plc/plant-view — every line + a live per-crane snapshot for the plant overview. Returns 200 `PlantView`. */
+export async function getPlant(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    res.status(200).json(await getPlantView());
   } catch (err) {
     next(err);
   }

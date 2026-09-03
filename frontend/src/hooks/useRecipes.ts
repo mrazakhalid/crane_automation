@@ -48,6 +48,22 @@ export function useRecipes() {
     [notify],
   );
 
+  /** Edit a saved recipe; on success replace it in place and return the record. */
+  const update = useCallback(
+    async (id: string, patch: Partial<NewRecipe>): Promise<Recipe | null> => {
+      try {
+        const recipe = await recipesApi.updateRecipe(id, patch);
+        setRecipes((prev) => prev.map((r) => (r.id === id ? recipe : r)));
+        notify(`Recipe "${recipe.name}" updated`, 'success');
+        return recipe;
+      } catch (err) {
+        notify(apiErrorMessage(err, 'Could not update recipe'), 'error');
+        return null;
+      }
+    },
+    [notify],
+  );
+
   /** Delete a recipe; optimistically removes it, restores on failure. */
   const remove = useCallback(
     async (id: string): Promise<void> => {
@@ -64,5 +80,5 @@ export function useRecipes() {
     [recipes, notify],
   );
 
-  return { recipes, loading, reload: load, save, remove };
+  return { recipes, loading, reload: load, save, update, remove };
 }

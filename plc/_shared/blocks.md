@@ -4,6 +4,13 @@ These four blocks are the **proven Line 4 program** (`docs/line4/instructions.md
 **same for every crane** — you never edit the logic; you only **duplicate** the DB + FB per crane
 and change the DB name they reference. Create them in TIA exactly as the Line 4 runbook describes.
 
+> **Reference build = `CraneSim.ap18`** (repo root). This proven TIA V18 project **already contains**
+> `typeTask` (UDT), `TravelTo` (FC), `CraneSequencer` (FB) and the `Line4Data` DB — it *is* the
+> "reference PLC_4". You do **not** need to rebuild it. To make the reusable global library
+> `CraneAutomation_Lib`, just open `CraneSim.ap18` and drag those three blocks into a new global
+> library's *Master copies*, then Save (see PLC_4 `BUILD-STEPS.md`). The tables below are the by-hand
+> fallback if you ever build the blocks from scratch.
+
 Per crane `<ID>` (e.g. `6`, `7A`, `1A`) you end up with:
 - a data block **`Crane<ID>Data`** (copy of the DB below),
 - a function block **`Crane<ID>_Seq`** (copy of `CraneSequencer` with `Line4Data` → `Crane<ID>Data`),
@@ -55,8 +62,8 @@ Add new block → **Data block (DB)** → **Global**, **Optimized access ON**. N
 | `ls_up` | `Bool` | hoist fully raised |
 | `ls_mid` | `Bool` | hoist at mid (optional; mirror + HMI) |
 | `btn_start` | `Bool` | operator start/hold button |
-| `mv_fwd` | `Bool` | travel toward higher station (East) |
-| `mv_rev` | `Bool` | travel toward lower station (West) |
+| `mv_fwd` | `Bool` | travel toward higher station — **forward = West** (IOMap drives `R-West`) |
+| `mv_rev` | `Bool` | travel toward lower station — **reverse = East** (IOMap drives `R-East`) |
 | `mv_up` | `Bool` | hoist up |
 | `mv_down` | `Bool` | hoist down |
 | `estop` | `Bool` | E-Stop input mirror (interlock = follow-up) |
@@ -85,9 +92,9 @@ Interface — **Input:** `target:Int`, `cur:Int`, `atTarget:Bool`; **Output:** `
 IF #atTarget THEN
     ;                       // arrived: leave both motors off
 ELSIF #target > #cur THEN
-    #fwd := TRUE;           // higher station number → travel forward (East)
+    #fwd := TRUE;           // higher station number → travel forward (West; IOMap → R-West)
 ELSE
-    #rev := TRUE;           // lower station number → travel reverse (West)
+    #rev := TRUE;           // lower station number → travel reverse (East; IOMap → R-East)
 END_IF;
 
 #TravelTo := #atTarget;

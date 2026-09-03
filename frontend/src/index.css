@@ -95,6 +95,11 @@
   .btn--sm {
     @apply min-h-8 px-3 text-sm;
   }
+  .btn--icon {
+    @apply px-0;
+    min-width: 2rem;
+    aspect-ratio: 1;
+  }
   .btn--danger {
     @apply border hover:border-danger;
     color: var(--color-danger);
@@ -141,6 +146,71 @@
   }
   .qr-loading {
     @apply grid place-items-center;
+  }
+
+  /* ---------- Searchable recipe dropdown (combobox) ---------- */
+  .combobox {
+    @apply relative w-full;
+  }
+  .combobox__control {
+    @apply relative flex items-center;
+  }
+  .combobox__icon {
+    @apply pointer-events-none absolute left-3 text-muted;
+  }
+  .combobox__caret {
+    @apply pointer-events-none absolute right-3 text-muted;
+  }
+  /* Two-class selector so the icon padding beats the `.field input` base rule. */
+  .combobox .combobox__input {
+    @apply min-h-11 w-full rounded-field border border-border bg-bg2 pr-9 pl-9 text-ink outline-none
+      transition focus:border-amber;
+  }
+  .combobox .combobox__input:focus {
+    box-shadow: 0 0 0 3px rgb(245 178 61 / 0.15);
+  }
+  .combobox__list {
+    @apply absolute top-full right-0 left-0 z-20 mt-1 max-h-64 overflow-y-auto rounded-field border
+      border-border bg-panel py-1 shadow-panel;
+  }
+  .combobox__option {
+    @apply block w-full cursor-pointer border-0 bg-transparent px-3.5 py-2 text-left text-ink
+      transition hover:bg-panel2;
+  }
+  .combobox__option--muted {
+    @apply text-muted;
+  }
+  .combobox__option.is-selected {
+    @apply bg-panel2 font-semibold text-amber;
+  }
+  .combobox__empty {
+    @apply px-3.5 py-2 text-sm;
+  }
+
+  /* ---------- Excel-like Tank / Time recipe table ---------- */
+  .recipe-table {
+    @apply flex flex-col gap-1.5 rounded-field border border-border bg-bg2 p-2.5;
+  }
+  .recipe-table__head,
+  .recipe-table__row {
+    @apply grid items-center gap-2;
+    grid-template-columns: 1fr 7rem 2rem;
+  }
+  .recipe-table__head {
+    @apply px-1 text-xs font-semibold text-muted uppercase tracking-wide;
+  }
+  .recipe-table__row input {
+    @apply min-h-10 rounded-field border border-border bg-panel px-3 text-ink outline-none
+      transition focus:border-amber;
+  }
+  .recipe-table__row input:focus {
+    box-shadow: 0 0 0 3px rgb(245 178 61 / 0.15);
+  }
+  .recipe-table__empty {
+    @apply px-1 py-1 text-sm;
+  }
+  .recipe-table__add {
+    @apply mt-1 self-start;
   }
 
   /* ---------- Page-options nav bar ---------- */
@@ -730,6 +800,11 @@
   .page-body__inner--wide {
     max-width: 920px;
   }
+  /* Full-width pages (Plant / Crane view): the track scales to fill the width, so
+     let the card use the whole padded page-body — no centred max-width cap. */
+  .page-body__inner--fluid {
+    max-width: none;
+  }
   .line-list {
     @apply flex w-full flex-col gap-4;
   }
@@ -823,8 +898,8 @@
   .process-page {
     @apply flex w-full flex-col gap-4 text-left;
   }
-  .process-input__del {
-    @apply flex-none self-end;
+  .process-input__recipe-actions {
+    @apply flex flex-none flex-wrap gap-2 self-end;
   }
   .process-input__foot {
     @apply items-end;
@@ -913,6 +988,9 @@
   }
   .chain__crane {
     @apply mb-1.5 text-xs font-bold text-muted uppercase tracking-wide;
+  }
+  .chain__cols {
+    @apply mb-1 flex justify-between px-2.5 text-[0.7rem] font-semibold text-muted uppercase tracking-wide;
   }
   .chain__tasks {
     @apply m-0 flex list-none flex-col gap-1 p-0;
@@ -1089,6 +1167,33 @@
   color: var(--color-on-role);
 }
 
+/* Direction frame around the single-crane stage: East/West = travel (verified),
+   Up/Down = hoist elevation. No North/South on a side view. */
+.crane-frame {
+  position: relative;
+  padding: 22px 44px;
+}
+.crane-frame__dir {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: color-mix(in srgb, var(--role-manager) 85%, var(--color-ink));
+}
+.crane-frame__dir--up { top: 4px; left: 50%; transform: translateX(-50%); }
+.crane-frame__dir--dn { bottom: 4px; left: 50%; transform: translateX(-50%); }
+.crane-frame__dir--e {
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%) rotate(180deg);
+  writing-mode: vertical-rl;
+}
+.crane-frame__dir--w {
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+}
 .crane-viz__stage {
   position: relative;
   height: 320px;
@@ -1249,3 +1354,494 @@
     font-size: 11px;
   }
 }
+
+/* ======================= Plant overview (live all-lines view) ============== */
+/* Cell pitch MUST match CELL in PlantLineTrack.tsx (avatars are positioned in px). */
+.plant {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.plant-empty {
+  color: var(--color-muted);
+}
+.plant-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.plant-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+/* Plant compass — a small N/E/S/W rose (plant-relative directions). */
+.plant-compass {
+  position: relative;
+  width: 66px;
+  height: 66px;
+  flex: none;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-panel2);
+}
+.plant-compass__lbl {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.plant-compass__n { bottom: 3px; left: 50%; transform: translateX(-50%); color: var(--role-manager); }
+.plant-compass__s { top: 3px; left: 50%; transform: translateX(-50%); }
+.plant-compass__e { left: 4px; top: 50%; transform: translateY(-50%); }
+.plant-compass__w { right: 4px; top: 50%; transform: translateY(-50%); }
+/* Needle: points North (up), tinted with the manager accent. */
+.plant-compass__rose {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  /* rotated 180° so the coloured point aims DOWN, toward North (now at the bottom) */
+  transform: translate(-50%, -50%) rotate(180deg);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 20px solid var(--role-manager);
+  margin-top: -4px;
+}
+.plant-compass__rose::after {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 20px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 20px solid color-mix(in srgb, var(--color-muted) 60%, transparent);
+}
+.plant-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.plant-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border-strong);
+  display: inline-block;
+}
+.plant-swatch--tank {
+  background: var(--color-panel2);
+}
+.plant-swatch--transfer {
+  background: color-mix(in srgb, var(--color-amber) 40%, var(--color-panel2));
+  border-color: var(--color-amber);
+}
+.plant-swatch--active {
+  background: color-mix(in srgb, var(--role-manager) 55%, var(--color-panel2));
+  border-color: var(--role-manager);
+}
+.plant-swatch--crane {
+  background: #f59e0b;
+  border-radius: 50%;
+  border-color: #f59e0b;
+}
+
+/* Direction frame — labels the whole plant's edges N/E/S/W so you can see
+   at a glance where each direction is (plant-relative; see the tooltip). */
+.plant-frame {
+  position: relative;
+  padding: 30px 46px;
+  border: 1.5px dashed color-mix(in srgb, var(--role-manager) 45%, var(--color-border));
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--role-manager) 4%, transparent);
+}
+.plant-frame__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.plant-frame__dir {
+  position: absolute;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: color-mix(in srgb, var(--role-manager) 85%, var(--color-ink));
+}
+.plant-frame__dir--n { bottom: 7px; left: 50%; transform: translateX(-50%); }
+.plant-frame__dir--s { top: 7px; left: 50%; transform: translateX(-50%); }
+.plant-frame__dir--e {
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%) rotate(180deg);
+  writing-mode: vertical-rl;
+}
+.plant-frame__dir--w {
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+}
+
+.plant-line {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-panel);
+  padding: 14px;
+}
+.plant-line__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-bottom: 12px;
+}
+.plant-line__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  margin: 0;
+  text-transform: capitalize;
+}
+.plant-line__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-panel2);
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+}
+.plant-line__status.is-live {
+  color: var(--role-operator);
+  border-color: color-mix(in srgb, var(--role-operator) 55%, transparent);
+}
+/* West ← → East hint = the crane trolley travel axis of the track. */
+.plant-line__axis {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-muted);
+  padding: 2px 8px;
+  border: 1px dashed var(--color-border);
+  border-radius: 999px;
+}
+.plant-line__axis-sep {
+  font-weight: 400;
+  font-style: italic;
+  opacity: 0.7;
+  padding: 0 4px;
+}
+.plant-line__readouts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-left: auto;
+}
+/* Live travel direction from the crane's motor bits. */
+.plant-travel {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.plant-dir {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 999px;
+  line-height: 1.5;
+}
+.plant-dir--ew {
+  color: #0b0f14;
+  background: var(--role-operator);
+}
+.plant-dir--ud {
+  color: #0b0f14;
+  background: var(--color-amber);
+}
+.plant-readout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.plant-readout__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: #0b0f14;
+  font-weight: 700;
+  font-size: 11px;
+}
+.plant-readout__text {
+  color: var(--color-ink);
+}
+.plant-readout__text--muted {
+  color: var(--color-muted);
+  font-style: italic;
+}
+.plant-inline-icon {
+  vertical-align: -2px;
+}
+
+.plant-track {
+  /* No horizontal scroll — the rail scales (via a transform) to fit the width.
+     Vertical padding/height are set inline per-line to fit the scaled rail. */
+  overflow: hidden;
+  padding-left: 0;
+  padding-right: 0;
+}
+.plant-track__rail {
+  position: relative;
+  height: 62px;
+}
+.plant-cell {
+  position: absolute;
+  top: 0;
+  width: 76px; /* 84px pitch − 8px gap */
+  height: 62px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-panel2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px;
+  text-align: center;
+  overflow: hidden;
+}
+/* Cell fill/ink come inline from the drawing's colour convention (TYPE_STYLE);
+   labels inherit that ink so text stays legible on every legend colour. */
+.plant-cell__label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: inherit;
+  white-space: nowrap;
+}
+.plant-cell__note {
+  font-size: 9px;
+  line-height: 1.1;
+  color: inherit;
+  opacity: 0.72;
+}
+/* Parking = the crane's home: dashed to read as "not a tank". */
+.plant-cell--park {
+  border-style: dashed;
+}
+/* Thin colour bar along the bottom = which crane owns this stretch. */
+.plant-cell__cranebar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 5px;
+}
+/* Transfer-tank marker (shared between two cranes). */
+.plant-cell__xfer {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  opacity: 0.75;
+}
+.plant-cell.is-zone-start {
+  box-shadow: inset 3px 0 0 0 var(--color-ink);
+}
+.plant-cell__zone {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  padding: 0 5px;
+  border-radius: 6px;
+  line-height: 1.5;
+}
+.plant-cell.is-active {
+  box-shadow: 0 0 0 2px var(--role-manager), 0 0 12px 2px color-mix(in srgb, var(--role-manager) 55%, transparent);
+  animation: plant-pulse 1.4s ease-in-out infinite;
+}
+@keyframes plant-pulse {
+  50% {
+    box-shadow: 0 0 12px 2px color-mix(in srgb, var(--role-manager) 55%, transparent);
+  }
+}
+
+.plant-crane {
+  position: absolute;
+  top: -30px;
+  width: 34px;
+  height: 30px;
+  margin-left: 21px; /* center the 34px avatar over the 76px cell */
+  border-radius: 8px 8px 3px 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #0b0f14;
+  box-shadow: 0 4px 10px rgb(0 0 0 / 0.4);
+  transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
+}
+.plant-crane::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  width: 2px;
+  height: 8px;
+  background: currentColor;
+  opacity: 0.5;
+}
+.plant-crane.is-offline {
+  opacity: 0.4;
+  filter: grayscale(0.7);
+}
+.plant-crane.is-travelling {
+  animation: plant-bob 0.7s ease-in-out infinite;
+}
+@keyframes plant-bob {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* ---- PLC I/O log ---- */
+.logbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+.logbar__group {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.logbar__btn {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--color-panel2);
+  color: var(--color-muted);
+  border: 0;
+  cursor: pointer;
+}
+.logbar__group .logbar__btn + .logbar__btn {
+  border-left: 1px solid var(--color-border);
+}
+.logbar__btn.is-active {
+  background: var(--role-manager);
+  color: #0b0f14;
+}
+.logbar__select,
+.logbar__search {
+  padding: 5px 10px;
+  font-size: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-panel2);
+  color: var(--color-ink);
+}
+.logbar__search {
+  flex: 1;
+  min-width: 140px;
+}
+.logbar__clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  margin-left: auto;
+}
+.logtable {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  max-height: 60vh;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.logrow {
+  display: grid;
+  grid-template-columns: 108px 90px 44px 1fr 90px;
+  gap: 8px;
+  padding: 4px 12px;
+  align-items: center;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  white-space: nowrap;
+}
+.logrow--head {
+  position: sticky;
+  top: 0;
+  background: var(--color-panel);
+  font-weight: 700;
+  color: var(--color-muted);
+  z-index: 1;
+}
+.logrow--err {
+  background: color-mix(in srgb, var(--color-danger, #ef4444) 12%, transparent);
+}
+.logrow__time { color: var(--color-muted); }
+.logrow__plc { font-weight: 700; color: var(--role-super_admin, var(--color-ink)); }
+.logrow__dir {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 700;
+  padding: 0 6px;
+  border-radius: 6px;
+}
+.logrow__dir--write { color: #0b0f14; background: var(--color-amber); }
+.logrow__dir--read { color: #0b0f14; background: var(--role-operator, #34d399); }
+.logrow__var {
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.logrow__val { font-weight: 700; color: var(--color-ink); text-align: right; }
+.logrow__errmsg { color: var(--color-danger, #ef4444); font-weight: 600; white-space: normal; }
+.logtable__empty { padding: 18px; color: var(--color-muted); font-family: var(--font-sans); }
+
+/* ---- Plant hoist + limit-switch readout badges ---- */
+.plant-hoist,
+.plant-ls {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 999px;
+  margin-left: 4px;
+  vertical-align: middle;
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+}
+.plant-hoist--up { color: #0b0f14; background: var(--role-operator); border-color: transparent; }
+.plant-hoist--down { color: #0b0f14; background: var(--color-amber); border-color: transparent; }
+.plant-hoist--moving { color: var(--role-manager); border-color: color-mix(in srgb, var(--role-manager) 55%, transparent); }
+.plant-ls { color: #0b0f14; background: var(--role-operator); border-color: transparent; }

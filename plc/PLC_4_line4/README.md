@@ -34,8 +34,8 @@ Tanks → stations (`station = tank.number + 1`) and their inputs:
 |:---:|---|---|---|---|---|
 | 0 (Park) | PRK-4A | `I0.7` | | `mv_up` → R-Up-1 | `Q0.4` |
 | 1 (Load) | TRVL-4A* | `I1.6` | | `mv_down` → R-Down-1 | `Q0.5` |
-| 12 | 1-7B | `I1.0` | | `mv_fwd` → R-East-1 | `Q0.6` |
-| 13 | 1-8 | `I1.1` | | `mv_rev` → R-West-1 | `Q0.7` |
+| 12 | 1-7B | `I1.0` | | `mv_rev` → R-East-1 (East/rev) | `Q0.6` |
+| 13 | 1-8 | `I1.1` | | `mv_fwd` → R-West-1 (West/fwd) | `Q0.7` |
 | 14 | 1-9 | `I1.2` | | **Hoist** | |
 | 15 | 1-10A | `I1.3` | | `ls_up` ← LS_Up | `I0.4` |
 | 16 | 1-10B | `I1.4` | | `ls_dip` ← LS_Down | `I0.5` |
@@ -46,15 +46,14 @@ Tanks → stations (`station = tank.number + 1`) and their inputs:
 switch (`TRVL-4A`) so it "loads" by picking up at the transfer tank. The two-crane handoff timing
 (7A/7B fill TRVL-4A, then 6 collects) is a **plant-specific follow-up**.
 
-## Crane 7A wiring (partial — panel extract is incomplete)
+## Crane 7A wiring (complete — from Panel_4, Rev 081426)
 
-Wired from the panel: hoist (`I4.3/4.4/4.5`), mode (`E-Stop I4.0`, `Auto I4.1`), start
-(`UP_Pendant I6.1`), Loading (`LOAD-4B I6.3`), motors (`R-Up/Down/East/West = Q2.4/2.5/2.6/2.7`).
-
-**Missing in the extract → TODO in `IOMap.scl`:** crane 7A's **parking** switch and its **per-tank**
-limit switches for tanks `1-1A`(st 2), `1-1B`(3), `1-2`(4), `1-3`(5), `1-4A`(6), `1-4B`(7). Fill
-these `%I` addresses from the real drawings before running 7A on hardware. Until then, drive those
-`ls_at[]` bits from a watch table on the sim (crane 6 runs fully without any TODOs).
+Fully wired from the drawing: hoist (`I4.3/4.4/4.5`), mode (`E-Stop I4.0`, `Auto I4.1`), start
+(`UP_Pendant I6.1`), **Parking** (`PRK-4C-C7A I4.7`), **Loading** (`LOAD-4A-C7A I4.6`;
+`LOAD-4B/4C/4D = I6.3/6.4/6.5` are extra bays), the six entry-tank switches
+`1-1A`(st 2)=`I5.0`, `1-1B`(3)=`I5.1`, `1-2`(4)=`I5.2`, `1-3`(5)=`I5.3`, `1-4A`(6)=`I5.4`,
+`1-4B`(7)=`I5.5`, and motors (`R-Up/Down/East/West = Q2.4/2.5/2.6/2.7`). No TODOs remain — both
+cranes 6 and 7A run fully on hardware from this panel.
 
 ## Sim verification (no real crane)
 

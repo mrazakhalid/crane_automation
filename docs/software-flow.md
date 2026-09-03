@@ -74,6 +74,216 @@ Siemens — no code change. See [`concepts/opcua-explained.md`](./concepts/opcua
 
 ## Build log (newest first)
 
+### 2026-09-03 — Recipe UX (searchable dropdown + Tank/Time table) + plant view fits screen width
+- **Searchable saved-recipe dropdown.** `RecipeInput` now has a search box above the "Saved recipe"
+  `<select>` that filters the option list (case-insensitive substring); the currently-selected recipe
+  is always kept visible so the value never disappears. For long recipe lists.
+- **Excel-like Tank / Time recipe editor.** The raw `tank=seconds;` textarea is gone — replaced by a
+  two-column **Tank | Time** grid (`components/RecipeTable.tsx`) with add/remove rows. Parsing/serializing
+  lives in `utils/recipe.ts` (`parseRecipe`/`serializeRecipe`); the raw `qr` string stays the single
+  source of truth the backend parses, so nothing downstream changed. Adopts external `qr` changes (QR
+  decode / load-saved) via the "adjust state during render" pattern (no effect → passes the lint rule).
+  Unit test: `__tests__/recipe.test.ts`.
+- **Task cards show Tank + Time, station hidden.** `ProcessSummary` chain rows now show a small
+  **Tank / Time** column header and each row shows the tank name + `{time}s`; the `station N` label is
+  commented out for now (still available as `t.station`).
+- **Plant view fits the viewport width (no horizontal scroll).** `PlantLineTrack` measures its track
+  width (ResizeObserver) and CSS-`transform: scale()`s the fixed-pitch rail so it fills the width and
+  scales up on large screens / down on small ones. A **shared** scale is used across lines — the widest
+  line (max cell count, computed in `PlantVisualizer` via the now-exported `buildCells`) exactly fills
+  the width so every line keeps the same cell size. `.plant-track` `overflow-x: auto` removed.
+- FE typecheck + lint + new tests clean. (Fixed the `ProcessPage`/`DashboardPage` tests too — they were
+  stale against the `ProcessProvider` refactor + the "Preview (sim)" rename + the new Tank/Time table.)
+
+### 2026-09-03 — Recipe UX round 2: combobox, QR→name prefill, edit-recipe popup, full-width views
+- **Searchable dropdown → real combobox.** Replaced the search-box-above-a-`<select>` with a single
+  `components/RecipeCombobox.tsx` (type to filter, click to pick, `""` = New recipe, closes on outside
+  click). `.recipe-search` CSS retired in favour of `.combobox`.
+- **Attach QR pre-fills the name.** Attaching a QR image now also seeds the **Save as** field with the
+  **file's base name** (extension stripped, editable) — `RecipeInput.onFileChange`.
+- **Edit an existing recipe in a popup.** When a saved recipe is selected, an **Edit** button opens
+  `components/RecipeEditModal.tsx` (reuses the shared `Modal`) to change the name + Tank/Time table and
+  **Save changes** → `PATCH /recipes/:id`. Wired a new `update()` action into `useRecipes` and
+  `ProcessWorkspace.updateRecipe` (reloads the recipe into the workspace if it's the active one).
+- **"Add tank" → "Add task"** button label (and empty-state text) in `RecipeTable`.
+- **Plant / Crane views go full-width.** New `page-body__inner--fluid` (`max-width: none`) on
+  `PlantPage` + `CraneViewPage` so the card uses the whole padded page-body; combined with the rail
+  auto-scale the tanks grow to fill big screens. Other pages keep the 920px `--wide` cap.
+- FE typecheck + lint + all 33 tests clean.
+
+### 2026-09-01 — Recipe → real PLC ("Send to PLC") + PlantSim for the PLC_1 sim
+- **"Send to PLC" action.** `useProcess.sendToPlc()` rebuilds each **routed line's** `tank=dwell` recipe
+  from the plan and posts it via the existing `sendBatch(lineId, qr)` — which writes each crane's
+  `tasks[]` + arms `cmd_send` on its own DB over OPC UA. `ProcessSummary` now leads with a **Send to PLC**
+  button (primary); the old time simulation is relabelled **Preview (sim)** and marked "does NOT touch the
+  PLC" to end the earlier confusion. Progress after a real send shows on the **Plant / Crane** views
+  (driven by the PLC handshake) and every write appears in the **Logs** page.
+- **`plc/PLC_1_line1/PlantSim.scl`** (SIM ONLY) — a virtual-crane FB that turns the sequencer's `mv_*`
+  outputs into `ls_*` limit switches so the sim crane **auto-moves** with no manual toggling. Because
+  PLC_1 has an `IOMap` (which copies `%I → ls_*` every scan and would clobber hand-set switches), in the
+  **sim** you call **PlantSim instead of IOMap** (after the sequencers); on real hardware use IOMap and
+  delete PlantSim. `btn_start` stays the one manual step. Pattern mirrors `docs/line4/sim-plant-auto-move.md`.
+- FE typecheck + build + lint clean.
+
+### 2026-09-01 — PLC I/O logger (per-PLC) + plant hoist / limit-switch indicators
+- **New PLC I/O log.** `services/plc/plc-log.ts` is an in-memory ring buffer (2000). `plc.service`
+  `writeNode`/`sendCommand` record every WRITE (recipe task fields, `cmd_send`, manual commands) and
+  `readNode` records READS — the ~1 Hz animation poll (`getCraneView`, `readTaskStation`) passes a new
+  `log=false` flag so it doesn't flood. `GET /api/plc/logs?after=<seq>` resolves each row's
+  `connectionId` → **PLC name** and cleans the NodeId to `Crane1AData.cmd_send`; `DELETE /api/plc/logs`
+  clears. Frontend: `usePlcLogs` (incremental poll) → **Logs** page (new nav item, manager+super_admin)
+  with direction / PLC / variable filters, write/read badges, and a Clear button. Tests: `plc-log.test.ts`.
+- **Plant hoist + limit-switch legends/indicators.** Each crane readout now shows a **hoist** badge
+  (Up/Down/Mid/Moving from `ls_up`/`ls_dip`) and a **LS** badge (position limit switch `ls_at[station]`
+  when made); the legend gained "Hoist up/down" and "Limit switch active" entries.
+- Backend 119 tests pass; FE typecheck + build + lint clean.
+- **Note on the process question:** the Plant/Crane views animate from the **real PLC** (`getCraneView`),
+  but the recipe run is still the **time simulation** (does not send to the PLC) — so they are not yet in
+  sync. Making the Plant *be* the process view (recipe → real PLC batch send → Plant animates real
+  feedback, dropping the time-sim) is the pending integration.
+
+### 2026-09-01 — Process persists across pages · Process tab hidden · Crane View = Plant style
+- **Process run now survives navigation.** `useProcess` was owned by `ProcessWorkspace`, so leaving the
+  Dashboard unmounted it and reset the run to the upload screen. New `context/ProcessProvider` holds the
+  process state (+ its 1 s poll) and is mounted once in the persistent `AppLayout` shell (around the
+  `Outlet`); `ProcessWorkspace` now reads it via `useProcessContext`. Visiting Plant/Crane View and
+  returning keeps the run ticking.
+- **Process tab hidden** (commented, not deleted) in `Sidebar` + `App` routes — the recipe → divide →
+  run workspace already lives on the manager **Dashboard**, so the tab was redundant.
+- **Crane View restyled to match the Plant view.** `CraneViewPage` now reuses `PlantVisualizer` (same
+  colour convention, compass, E/W frame, animated tracks), focused on the line(s) with a connected
+  crane (falls back to all lines when none connected). The old abstract gantry `CraneVisualizer` is
+  retained in the tree but no longer routed.
+- **NOTE — the Process run is still a time-based SIMULATION, not PLC feedback.** `run-engine.ts` derives
+  each task's state from wall-clock elapsed vs its dwell window; it never reads the PLC handshake
+  (`sts_step`/`sts_done`). Wiring the real per-crane batch handshake (from `batch.service`) is a
+  separate, still-pending task — the run-engine is deliberately isolated so that swap is localized.
+
+### 2026-09-01 — Swapped direction motor outputs in all 6 IOMaps (forward = West)
+- Plant owner confirmed: **West = forward = right, East = reverse = left.** The sequencer sets `mv_fwd`
+  to travel to **higher** stations = the process *forward* direction = **West**, so `mv_fwd` must drive
+  the **West** motor. The IOMaps had it inverted (`mv_fwd → R-East`).
+- **Fix applied to every crane in all 6 IOMaps** (11 cranes): each `%Q` keeps its physical
+  `R-East`/`R-West` label (fixed wiring); the driving bit was swapped so **`R-East ← mv_rev`** (East /
+  reverse / left / lower station) and **`R-West ← mv_fwd`** (West / forward / right / higher station).
+  `R-Trolley` enables (`mv_fwd OR mv_rev`) are symmetric — untouched. Verified: no `R-East` still driven
+  by `mv_fwd`, no `R-West` by `mv_rev`.
+- Docs updated to match: `_shared/blocks.md` (DB table + `TravelTo` comment), `PLC_4/README.md` motor
+  table. Line-4 runbook was already neutral ("toward higher/lower station"). Animation already flipped
+  to `mv_fwd`→**West ▶** / `mv_rev`→**East ◀** in the prior entry.
+- **Still a commissioning check:** confirm with a jog that energizing `R-East` physically moves the
+  crane toward the East/loading end. If a specific crane's motor is phased the other way, re-swap just
+  that crane.
+
+### 2026-08-31 — Correction: East is on the LEFT, West on the RIGHT (per plant owner)
+- My earlier inference ("East = screen-right, verified via crane 6") was **wrong** — the plant owner
+  confirmed **East is on the left, West on the right**. Flipped E/W everywhere: plant direction frame
+  (EAST left edge, WEST right edge), compass rose (E left, W right), per-line axis hint, live travel
+  badges (`mv_fwd`=East → left chevron, `mv_rev`=West → right chevron), and the Crane-View frame + cart
+  chevrons. **North/South (top/bottom) and the tank layout are unchanged.**
+- **Implication for the open "travel direction" item:** the shared sequencer sets `mv_fwd` (=`R-East`)
+  toward *higher* station numbers, which render on the *right* of the track — i.e. the West side. So
+  "East = higher station" does **not** hold physically; the station numbering increases toward West.
+  This is consistent with the earlier flag that real-hardware travel direction needs commissioning: the
+  `ls_at` placement / station-number-vs-physical-East relationship must be confirmed on the floor.
+
+### 2026-08-31 — Full 6-PLC audit vs panel drawings + module part numbers in every BUILD-STEPS
+- **Programmatic address cross-check (all 6 IOMaps vs `Panel_Drawings_081426`).** Every `%I`/`%Q`
+  address in `plc/*/IOMap.scl` matches its panel's label (parking, loading, tanks, spray/INS, drying/DRY,
+  travel/TRVL, motors). Station indices = `tank.number+1`, consistent with the seed. **Verified clean.**
+- **Module part numbers added to BUILD-STEPS 2–6** (were generic "add DI/DO modules"). All 6 panels use
+  the same articles: `DI 32x24VDC HF` `6ES7521-1BL00-0AB0` (×2 for 2-crane PLCs → `%I0–I3`/`%I4–I7`;
+  ×1 for PLC_6) and `DQ 32x24VDC/0.5A HF` `6ES7522-1BL01-0AB0` (×1 → `%Q0–Q3`); CPU `6ES7511-1AK02`.
+- **Open items that need field/commissioning input (cannot be settled from the drawings):**
+  1. **Crane 1B pickup switch** — Panel_1 wires `TRVL-1A` only on 1A's card; no pickup switch on 1B →
+     `ls_at[1]` stays a documented TODO.
+  2. **Downstream-crane "Loading"=transfer-pickup mapping** — modeled as each downstream crane's transfer
+     switch; which transfer it truly collects at (and whether its card carries that switch) needs the real
+     handoff confirmed. Cranes 2 & 8 pickups were filled from their own transfer switch (`%I6.0`/`%I6.2`).
+  3. **Travel *direction* on real hardware is sim-only-verified.** The shared sequencer picks East/West by
+     station-number order (`mv_fwd`=East=higher station), so correct motion requires `ls_at` switches
+     placed with station numbers **monotonic in the physical East direction**, park at the low end. If a
+     direction is wrong the crane simply fails to reach the target switch (drives to end-stop) rather than
+     dipping the wrong tank — a stuck, not unsafe, failure. Needs a commissioning walk-through per line.
+
+### 2026-08-31 — Direction indicators (E/W/N/S) on the plant view
+- **Read the drawing's orientation.** `Plating Line 05-15-2026 Rev 27.vsdx` has a North-arrow master
+  (id 133) rotated ~150.8° (true site north points lower-left) and labels **E/W** but no standalone
+  N/S — the site is rotated, so crane **East/West are plant/pendant directions** (`R-East`/`R-West`),
+  not true compass. Confirmed **East = higher station = screen-right** via the sim crane 6 (its
+  `TRVL-4A`/`PRK-4A` sit at Line 4's right end).
+- **Live per-crane travel badge.** `PlantLineTrack` now shows direction from the crane's real motor
+  bits (`CraneView.moving`): `mv_fwd`→**East ▶**, `mv_rev`→**◀ West**, `mv_up`/`mv_down`→**hoist ▲/▼**.
+  Nothing shown when idle. (These bits were already read in `getCraneView`.)
+- **Static orientation aids.** Each line header carries a "West ◀ crane travel ▶ East" hint; the page
+  gets a small **N/E/S/W compass rose**; and the whole plant is wrapped in a **direction frame** with
+  edge labels — **NORTH** (top), **SOUTH** (bottom), **WEST** (left), **EAST** (right) — so you can see
+  where each direction is at a glance (plant-relative: E=right, W=left; tooltip notes true north is
+  rotated). The single-crane **Crane View** stage gets its own frame — **East/West** (travel) +
+  **Up/Down** (hoist); no N/S on a side view. Frontend typecheck + build clean.
+- **Confidence note.** East/West is evidence-based: panels label the travel motors `R-East`/`R-West`,
+  the IOMaps wire `mv_fwd`→`R-East`, and `TravelTo` sets `mv_fwd` toward higher stations, which sit at
+  the **right** end of the Line-4 drawing → East = right. **North/South = top/bottom is a chosen map
+  convention, NOT confirmed** — the Visio north-arrow is rotated ~150.8° (true north ≈ lower-left), so
+  "top" is not true north. Needs a real-world fact (which way the building faces) to lock down N/S.
+
+### 2026-08-31 — Panel-drawing cross-check: every spot type is a wired limit switch
+- **Verified against `raza_docs/Panel_Drawings_081426 (1).xlsx` (Panel_1..Panel_6).** Every space type
+  in the plant-view legend maps to a real limit-switch input in both the panel drawings and the
+  `plc/<PLC>/IOMap.scl` files, and the `ls_at[]` index equals the animation station (`tank.number+1`):
+  Parking=`PRK-*`→`ls_at[0]`, Loading=`LOAD-*A`→`ls_at[1]` (entry cranes), Spray/Inspection=`INS-*`,
+  Drying=`DRY-*`, Travel=`TRVL-*`, tanks — all `ls_at[station]`. Spot-checked Line 5 crane 8/9: IOMap
+  `ls_at` order matches the seed tank order exactly (incl. all `INS-*`/`DRY-*`).
+- **Crane panels control motion only.** Panel outputs are crane motion (`R-Up/Down/East/West/Hoist/
+  Trolley`) + indicator lamps + spares — there are **no spray-pump/dryer/heater outputs**. So to the
+  crane a spray/inspection or drying station is just a **position** (arrive on its limit switch, then
+  dip/dwell like any tank); the spray/dry process equipment is external to these crane PLCs.
+- **Closed 2 of 3 downstream-pickup TODOs** (`ls_at[1]` = transfer pickup, following the crane 6/7B/4
+  pattern): PLC_2 crane 2 → `%I6.0` (4-6A), PLC_5 crane 8 → `%I6.2` (5-5). **PLC_1 crane 1B stays a
+  documented field decision** — Panel_1 wires `TRVL-1A` only on 1A's card (`%I3.0`), no pickup switch
+  on 1B's input card (needs a cross-wire or an added switch).
+
+### 2026-08-31 — Plant Overview layout re-arranged to match the plant drawing
+- **Faithful layout (per `raza_docs/Plating Line 05-15-2026 Rev 27.vsdx`).** The track was drawn
+  `PARK → LOAD → tanks` (parking leftmost) and sorted **all** tanks by station, which rendered the
+  **downstream** crane's zone first on lines 2/3/5 (their entry crane is numbered later). Verified
+  against the Visio shape X-positions: every line runs **LOAD busbar (far left) → crane zones in
+  physical order → PRK (far right)**, and the physical zone order is the `line.cranes` order
+  (entry crane first: 1A→1B, 3→2, 5→4, 7A→7B→6, 9→8).
+- **`PlantLineTrack.buildCells` rewritten:** LOAD (station 1) at far left → tanks **grouped by crane
+  in `line.cranes` order**, sorted by station within each zone (transfer tanks land at the boundary)
+  → PARK (station 0) at far right. Stations stay line-global, so crane avatars still locate their cell
+  by station value. Tank cells are **tinted by owning-crane colour** with a zone tag on the first cell.
+- **`PlantVisualizer`:** lines now sorted `line1…line5` top-to-bottom (was DB insertion order).
+- **Per-crane park markers.** One `PARK` cell **per crane** (station 0) at the end of its zone —
+  matches the drawing's PRK-xA/-xB spots. On **3+ crane lines the entry crane parks at the far left**
+  by the loading busbar (Line 4's 7A → PRK-4C); the rest keep end-of-zone homes. A parked crane's
+  avatar homes to *its own* park cell (station-0 lookup keys on `crane`, not the first station-0 cell).
+- **Drawing colour convention applied to every cell.** Exact fills pulled from the Visio legend
+  ("Legend For Tanks"): Parking `#c5e0b3` (green), Loading/Storage `#f4b183` (orange), Spray/Inspection
+  `#ff66ff` (magenta, `INS-*`), Travel Zone `#ffff00` (yellow, `TRVL-*`), Drying `#37e8fb` (cyan,
+  `DRY-*`), process tank `#ffffff` (white). New `TYPE_STYLE` map + `classify()` colour each cell by
+  kind/name-prefix; crane identity moved from the fill to a thin **bottom colour bar** per zone, plus a
+  ⇄ marker on transfer tanks. Legend on the page mirrors the six space types.
+- No backend/seed change (seed tank *numbers* are the PLC routing order; the view derives physical
+  order from the crane grouping). Frontend typecheck + build clean.
+
+### 2026-08-28 — Live Plant Overview page (all lines animated from PLC signals)
+- **New page `/plant`** (manager + super-admin): a whole-plant live view. Each line renders as a
+  horizontal **track** — Parking, Loading, then every tank in station order (transfer tanks flagged) —
+  with **crane avatars that glide** to their live physical station and show state (Idle/Travelling/
+  Soaking/… from `sts_state` 0–90), step X/count, and **current → next tank** per the loaded recipe.
+  Lines whose PLC is offline show a muted "no signal" state (never blocks on an unreachable PLC).
+- **Backend:** new `services/plant-view.service.ts` → `getPlantView()` aggregates every line + its
+  bound PLCs' pool status + a per-connected-crane `getCraneView()` read, and resolves current/next
+  tank from each crane's loaded `tasks[]` (new `readTaskStation()` in `batch.service.ts`). Exposed at
+  **`GET /api/plc/plant-view`** (`requireAuth`; controller `getPlant`). Only connected cranes are read.
+- **Frontend:** `usePlantView` (polls `/plc/plant-view` ~1 s, holds last-good on blips) → `PlantVisualizer`
+  → `PlantLineTrack` (px-positioned avatars, CSS glide/pulse). Types mirror the backend in `types/plc.ts`.
+- **Data source (per the ask):** real OPC UA signals. Line 4 (sim PLC) animates live now; the other
+  lines light up as their PLCs come online. Tank order/station come from the seeded lines, so it stays
+  consistent with the per-crane PLC IOMaps. Tests: `plant-view.test.ts` (offline fan-out + Line-4 split).
+
 ### 2026-08-26 — Per-crane PLC code (real I/O) + per-crane software signal routing
 - **PLC side (new `plc/` tree):** one folder per PLC; every crane runs an **independent copy** of the
   proven Line 4 sequencer against its **own DB** `Crane<ID>Data` (duplicate-per-crane, DB rename

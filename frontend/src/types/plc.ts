@@ -97,3 +97,31 @@ export interface CraneView {
   hoist: HoistPosition;
   moving: { fwd: boolean; rev: boolean; up: boolean; down: boolean };
 }
+
+/** Live snapshot for one crane on the plant overview (mirror of the backend). */
+export interface CranePlantView {
+  crane: string;
+  connectionId: string;
+  plcName: string;
+  connected: boolean;
+  view: CraneView | null;
+  currentStation: number | null;
+  currentTank: string | null;
+  nextStation: number | null;
+  nextTank: string | null;
+  error: string | null;
+}
+
+/** One line's layout + the live views of the cranes on its PLC(s). */
+export interface LinePlantView {
+  lineId: string;
+  lineName: string;
+  cranes: string[];
+  tanks: import('./line.js').Tank[];
+  cranesView: CranePlantView[];
+}
+
+/** GET /plc/plant-view — every line with its tanks and live per-crane state. */
+export interface PlantView {
+  lines: LinePlantView[];
+}

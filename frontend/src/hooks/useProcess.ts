@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as processApi from '../api/process.js';
+import * as plcApi from '../api/plc.js';
 import { apiErrorMessage } from '../api/client.js';
 import { useToast } from './useToast.js';
 import { decodeQrFromFile } from '../utils/qr.js';
@@ -27,6 +28,7 @@ export function useProcess() {
   const [decoding, setDecoding] = useState(false);
   const [planning, setPlanning] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [sending, setSending] = useState(false);
   const pollRef = useRef<number | null>(null);
 
   /** Stop the status poll (idempotent). */
@@ -131,6 +133,41 @@ export function useProcess() {
     }
   }, [qr, overrides, notify, startPolling]);
 
+  /**
+   * Send the planned recipe to the REAL PLC(s). For each routed line it rebuilds
+   * that line's `tank=dwell` recipe from the plan and posts it via `sendBatch`,
+   * which writes each crane's tasks + arms `cmd_send` on its own DB. Progress then
+   * shows live on the Plant / Crane views (driven by the PLC handshake), not the
+   * time simulation. Unrouted groups (no PLC assigned) are skipped.
+   */
+  const sendToPlc = useCallback(async (): Promise<void> => {
+    if (!plan) return;
+    const byLine = new Map<string, { name: string; parts: string[] }>();
+    for (const g of plan.groups) {
+      if (!g.connectionId) continue; // no PLC assigned → can't send
+      const entry = byLine.get(g.lineId) ?? { name: g.lineName, parts: [] };
+      for (const chain of g.cranes) for (const t of chain.tasks) entry.parts.push(`${t.tankName}=${t.time}`);
+      byLine.set(g.lineId, entry);
+    }
+    if (byLine.size === 0) {
+      notify('No routed tasks to send — assign the cranes to a PLC in PLC Manager first', 'error');
+      return;
+    }
+    setSending(true);
+    try {
+      let total = 0;
+      for (const [lineId, entry] of byLine) {
+        const res = await plcApi.sendBatch(lineId, `${entry.parts.join(';')};`);
+        total += res.count;
+      }
+      notify(`Sent ${total} task(s) to the PLC — watch it run on the Plant view`, 'success');
+    } catch (err) {
+      notify(apiErrorMessage(err, 'Could not send the recipe to the PLC'), 'error');
+    } finally {
+      setSending(false);
+    }
+  }, [plan, notify]);
+
   /** Stop and reset the current run. */
   const stop = useCallback(async (): Promise<void> => {
     stopPolling();
@@ -171,10 +208,12 @@ export function useProcess() {
     decoding,
     planning,
     starting,
+    sending,
     decode,
     divide,
     resolveAmbiguity,
     start,
+    sendToPlc,
     stop,
     loadRecipe,
     stateForStep,

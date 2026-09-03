@@ -70,8 +70,16 @@ export function CraneVisualizer({ view }: { view: CraneView }) {
         )}
       </div>
 
-      <div className="crane-viz__stage" role="img" aria-label={`Crane ${STATE_NAMES[view.state] ?? ''}`}>
-        <div className="crane-viz__beam" />
+      <div
+        className="crane-frame"
+        title="Crane travels East (left) ↔ West (right) along the line; the hoist raises (up) and lowers (down). Plant/pendant directions — a single crane's side view has no North/South."
+      >
+        <span className="crane-frame__dir crane-frame__dir--w">WEST</span>
+        <span className="crane-frame__dir crane-frame__dir--e">EAST</span>
+        <span className="crane-frame__dir crane-frame__dir--up">UP</span>
+        <span className="crane-frame__dir crane-frame__dir--dn">DOWN</span>
+        <div className="crane-viz__stage" role="img" aria-label={`Crane ${STATE_NAMES[view.state] ?? ''}`}>
+          <div className="crane-viz__beam" />
 
         <div className="crane-viz__trolley" style={{ left: `${leftPct}%` }}>
           <div className={`crane-viz__cart${travelling ? ' is-moving' : ''}`}>
@@ -86,22 +94,23 @@ export function CraneVisualizer({ view }: { view: CraneView }) {
           </div>
         </div>
 
-        <div className="crane-viz__stations">
-          {STATIONS.map((s) => (
-            <div
-              key={s.idx}
-              className={`crane-station crane-station--${s.kind}${station === s.idx ? ' is-here' : ''}`}
-            >
-              <span
-                className={`crane-station__switch${view.lsAt[s.idx] ? ' is-on' : ''}`}
-                title={`Limit switch ${s.idx}`}
-                aria-hidden
-              />
-              <div className="crane-station__box">
-                <span className="crane-station__label">{s.label}</span>
+          <div className="crane-viz__stations">
+            {STATIONS.map((s) => (
+              <div
+                key={s.idx}
+                className={`crane-station crane-station--${s.kind}${station === s.idx ? ' is-here' : ''}`}
+              >
+                <span
+                  className={`crane-station__switch${view.lsAt[s.idx] ? ' is-on' : ''}`}
+                  title={`Limit switch ${s.idx}`}
+                  aria-hidden
+                />
+                <div className="crane-station__box">
+                  <span className="crane-station__label">{s.label}</span>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import { HttpError } from '../../utils/http-error.js';
 import * as opcua from './opcua-client.js';
 import { DEFAULT_CONNECTION_ID } from './opcua-client.js';
 import type { ReadResult, WriteDataType } from './opcua-client.js';
+import * as plcLog from './plc-log.js';
 import type { SecurityModeName, SecurityPolicyName } from './opcua-security.js';
 
 /**
@@ -168,15 +169,24 @@ export async function disconnectPlc(
   return opcua.getConnectionStatus(connectionId);
 }
 
-/** Read one node's value on a connection (default = legacy slot); 409 when not connected. */
+/**
+ * Read one node's value on a connection (default = legacy slot); 409 when not connected.
+ * `log` (default true) records the read in the PLC I/O log; the high-frequency
+ * animation poll passes `false` so it doesn't flood the log.
+ */
 export async function readNode(
   nodeId: string,
   connectionId: string = DEFAULT_CONNECTION_ID,
+  log = true,
 ): Promise<ReadResult> {
   try {
-    return await opcua.readValue(connectionId, nodeId);
+    const result = await opcua.readValue(connectionId, nodeId);
+    if (log) plcLog.record({ dir: 'read', connectionId, nodeId, value: result.value, ok: true });
+    return result;
   } catch (err) {
-    throw toHttpError(err, nodeId);
+    const http = toHttpError(err, nodeId);
+    if (log) plcLog.record({ dir: 'read', connectionId, nodeId, value: null, ok: false, error: http.message });
+    throw http;
   }
 }
 
@@ -189,11 +199,16 @@ export async function sendCommand(
 ): Promise<ReadResult> {
   try {
     await opcua.writeValue(connectionId, nodeId, dataType, value);
+    plcLog.record({ dir: 'write', connectionId, nodeId, value, ok: true });
   } catch (err) {
-    throw toHttpError(err, nodeId);
+    const http = toHttpError(err, nodeId);
+    plcLog.record({ dir: 'write', connectionId, nodeId, value, ok: false, error: http.message });
+    throw http;
   }
   // Read the value straight back so the caller can confirm the round-trip.
-  return opcua.readValue(connectionId, nodeId);
+  const echo = await opcua.readValue(connectionId, nodeId);
+  plcLog.record({ dir: 'read', connectionId, nodeId, value: echo.value, ok: true });
+  return echo;
 }
 
 /**
@@ -213,8 +228,11 @@ export async function writeNode(
 ): Promise<void> {
   try {
     await opcua.writeValue(connectionId, nodeId, dataType, value);
+    plcLog.record({ dir: 'write', connectionId, nodeId, value, ok: true });
   } catch (err) {
-    throw toHttpError(err, nodeId);
+    const http = toHttpError(err, nodeId);
+    plcLog.record({ dir: 'write', connectionId, nodeId, value, ok: false, error: http.message });
+    throw http;
   }
 }
 

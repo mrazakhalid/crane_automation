@@ -3,10 +3,11 @@ import {
   ChevronsRight,
   Container,
   Cpu,
+  Factory,
   LayoutDashboard,
-  ListTree,
   LogOut,
   Moon,
+  ScrollText,
   Server,
   Sun,
   UserCog,
@@ -29,8 +30,11 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Dashboard', Icon: LayoutDashboard },
+  { to: '/plant', label: 'Plant', Icon: Factory, roles: ['manager', 'super_admin'] },
   { to: '/crane', label: 'Crane View', Icon: Container, roles: ['manager', 'super_admin'] },
-  { to: '/process', label: 'Process', Icon: ListTree, roles: ['manager'] },
+  { to: '/logs', label: 'Logs', Icon: ScrollText, roles: ['manager', 'super_admin'] },
+  // Process tab hidden for now — the recipe → divide → run workspace lives on the manager Dashboard.
+  // { to: '/process', label: 'Process', Icon: ListTree, roles: ['manager'] },
   { to: '/lines', label: 'Lines', Icon: Waypoints, roles: ['super_admin'] },
   { to: '/plc', label: 'PLC', Icon: Cpu, roles: ['super_admin'] },
   { to: '/plc-manager', label: 'PLC Manager', Icon: Server, roles: ['super_admin'] },

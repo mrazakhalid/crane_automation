@@ -1,6 +1,7 @@
 import type {
   BatchStatus,
   CraneView,
+  PlantView,
   PlcConnection,
   PlcState,
   ReadResult,
@@ -82,4 +83,35 @@ export async function ackBatch(): Promise<BatchStatus> {
 export async function getCraneView(): Promise<CraneView> {
   const { data } = await apiClient.get<CraneView>('/plc/crane-view');
   return data;
+}
+
+/** GET /plc/plant-view — every line + live per-crane state for the plant overview (polled). */
+export async function getPlantView(): Promise<PlantView> {
+  const { data } = await apiClient.get<PlantView>('/plc/plant-view');
+  return data;
+}
+
+/** One OPC UA I/O log row (write or read), resolved to its PLC name. */
+export interface PlcLogRow {
+  seq: number;
+  ts: number;
+  dir: 'write' | 'read';
+  plc: string;
+  variable: string;
+  value: unknown;
+  ok: boolean;
+  error: string | null;
+}
+
+/** GET /plc/logs — the PLC I/O log; `after` returns only entries newer than that seq. */
+export async function getPlcLogs(after = 0): Promise<{ entries: PlcLogRow[]; lastSeq: number }> {
+  const { data } = await apiClient.get<{ entries: PlcLogRow[]; lastSeq: number }>('/plc/logs', {
+    params: { after },
+  });
+  return data;
+}
+
+/** DELETE /plc/logs — clear the in-memory PLC I/O log. */
+export async function clearPlcLogs(): Promise<void> {
+  await apiClient.delete('/plc/logs');
 }

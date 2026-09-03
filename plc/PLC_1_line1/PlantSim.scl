@@ -1,0 +1,55 @@
+// ============================================================================
+//  PlantSim  —  PLC_1 (Line 1)  —  virtual crane for the PLCSIM sim  (SIM ONLY)
+// ----------------------------------------------------------------------------
+//  Turns the CraneSequencer's motor outputs (mv_*) into limit-switch inputs
+//  (ls_*), so the crane auto-moves in the sim with NO manual switch toggling.
+//
+//  Block type : FUNCTION BLOCK (FB), language SCL.
+//  Static vars: sim_pos : Real := 0.0 ; sim_h : Real := 0.0 ; tick : TON_TIME
+//  Temp  vars : i : Int
+//
+//  ⚠️  SIM ONLY. On real hardware you DELETE the PlantSim call and use IOMap
+//      instead (there ls_* come from wired %I inputs, %Q from mv_*).
+//
+//  OB1 (sim) call order — call INSTEAD of IOMap, AFTER the sequencer:
+//      Crane1A_Seq  →  Crane1B_Seq  →  PlantSim1A  →  PlantSim1B
+//  (Do NOT also call IOMap in the sim — it would overwrite ls_* from the FALSE
+//   %I inputs each scan and the crane would never "arrive".)
+//
+//  This copy drives Crane1AData. For crane 1B: copy the FB → PlantSim1B and
+//  Ctrl+H replace  Crane1AData → Crane1BData  (the only change), same as the
+//  sequencers.
+// ============================================================================
+
+#i := 0;
+
+// ~5 Hz motion tick (self-retriggering one-shot pulse).
+#tick(IN := NOT #tick.Q, PT := T#200MS);
+
+IF #tick.Q THEN
+    IF "Crane1AData".mv_fwd  THEN #sim_pos := #sim_pos + 0.2; END_IF;   // West / forward
+    IF "Crane1AData".mv_rev  THEN #sim_pos := #sim_pos - 0.2; END_IF;   // East / reverse
+    IF "Crane1AData".mv_down THEN #sim_h   := #sim_h + 0.25; END_IF;
+    IF "Crane1AData".mv_up   THEN #sim_h   := #sim_h - 0.25; END_IF;
+END_IF;
+
+// Clamp to the physical range (line 1 crane stations reach 15 → allow 0..20).
+IF #sim_pos < 0.0  THEN #sim_pos := 0.0;  END_IF;
+IF #sim_pos > 20.0 THEN #sim_pos := 20.0; END_IF;
+IF #sim_h   < 0.0  THEN #sim_h := 0.0; END_IF;
+IF #sim_h   > 1.0  THEN #sim_h := 1.0; END_IF;
+
+// Trip each station's limit switch when the trolley is over it (window < 0.3).
+FOR #i := 0 TO 20 DO
+    "Crane1AData".ls_at[#i] := ABS(#sim_pos - INT_TO_REAL(#i)) < 0.3;
+END_FOR;
+
+// Hoist limits: fully down = in tank (dip); fully up = raised.
+"Crane1AData".ls_dip := #sim_h > 0.9;
+"Crane1AData".ls_up  := #sim_h < 0.1;
+
+// btn_start is intentionally NOT touched here — it stays the operator's manual
+// "material loaded, hold 3 s" press (state 30). Modify it TRUE in the watch table
+// when the crane is waiting at Loading, then FALSE. (If you truly want it 100%
+// hands-free, add a SEPARATE TON static `btnT` and set btn_start := btnT.Q while
+// sts_state = 30 — don't reuse #tick, whose PT is the 200 ms motion pulse.)

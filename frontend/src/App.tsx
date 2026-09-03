@@ -8,10 +8,13 @@ import { AccountPage } from './pages/AccountPage.js';
 import { CraneViewPage } from './pages/CraneViewPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { LinesPage } from './pages/LinesPage.js';
+import { LogsPage } from './pages/LogsPage.js';
 import { LoginPage } from './pages/LoginPage.js';
+import { PlantPage } from './pages/PlantPage.js';
 import { PlcManagerPage } from './pages/PlcManagerPage.js';
 import { PlcPage } from './pages/PlcPage.js';
-import { ProcessPage } from './pages/ProcessPage.js';
+// Process tab hidden for now — the workspace lives on the manager Dashboard.
+// import { ProcessPage } from './pages/ProcessPage.js';
 import { UsersPage } from './pages/UsersPage.js';
 
 /**
@@ -34,11 +37,14 @@ export function App() {
                   <Route index element={<DashboardPage />} />
                   <Route path="account" element={<AccountPage />} />
                   <Route element={<RequireRole roles={['manager', 'super_admin']} />}>
+                    <Route path="plant" element={<PlantPage />} />
                     <Route path="crane" element={<CraneViewPage />} />
+                    <Route path="logs" element={<LogsPage />} />
                   </Route>
+                  {/* Process tab hidden for now — workspace is on the manager Dashboard.
                   <Route element={<RequireRole roles={['manager']} />}>
                     <Route path="process" element={<ProcessPage />} />
-                  </Route>
+                  </Route> */}
                   <Route element={<RequireRole roles={['super_admin']} />}>
                     <Route path="lines" element={<LinesPage />} />
                     <Route path="plc" element={<PlcPage />} />

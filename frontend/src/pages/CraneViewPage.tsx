@@ -1,40 +1,46 @@
 import { Container } from 'lucide-react';
-import { CraneVisualizer } from '../components/CraneVisualizer.js';
-import { useCraneView } from '../hooks/useCraneView.js';
+import { PlantVisualizer } from '../components/PlantVisualizer.js';
+import { usePlantView } from '../hooks/usePlantView.js';
 
 /**
  * Crane View page (manager + super-admin).
  *
- * Purpose: A live, animated picture of the gantry crane driven by the PLC — the
- *   trolley moves station to station and the hoist raises/lowers as the batch
- *   runs. Read-only; it polls `GET /plc/crane-view`.
+ * Purpose: The live crane on its line, drawn with the **same layout, colours,
+ *   compass and direction frame as the Plant page** (reuses `PlantVisualizer`) so
+ *   the two views are visually identical. It focuses on the line(s) that currently
+ *   have a connected crane; if none are connected yet it shows all lines so the
+ *   page isn't blank. Read-only; polls `GET /plc/plant-view` and animates as a
+ *   recipe runs.
  */
 export function CraneViewPage() {
-  const { view, connected, error } = useCraneView();
+  const { plant, loading, error } = usePlantView();
+
+  // Focus on the line(s) with a connected crane; fall back to all lines when none
+  // are connected yet, so the page still shows the layout.
+  const focused = plant ? plant.lines.filter((l) => l.cranesView.some((c) => c.connected)) : [];
+  const view = plant ? { lines: focused.length ? focused : plant.lines } : null;
 
   return (
     <div className="page">
       <div className="page-body">
-        <div className="page-body__inner">
+        <div className="page-body__inner page-body__inner--fluid">
           <p className="eyebrow">Workspace</p>
           <section className="card">
             <h2 className="form__title">
               <Container size={20} aria-hidden /> Crane view
             </h2>
             <p className="muted form__sub">
-              Live gantry position from the PLC — updates as the crane runs a batch.
+              Live crane on its line — same layout &amp; colours as the Plant view, focused on the
+              connected crane. Animates as a recipe runs.
             </p>
 
-            {view ? (
-              <>
-                <CraneVisualizer view={view} />
-                {!connected && (
-                  <p className="muted crane-viz__note">Reconnecting to the PLC — showing last position…</p>
-                )}
-              </>
+            {loading && !view ? (
+              <p className="muted crane-viz__note">Connecting to the PLC…</p>
+            ) : view ? (
+              <PlantVisualizer plant={view} />
             ) : (
               <p className="muted crane-viz__note">
-                {error ?? 'Connecting to the PLC…'} Ask an admin to connect on the PLC page if this persists.
+                {error ?? 'No plant data.'} Ask an admin to connect on the PLC page if this persists.
               </p>
             )}
           </section>

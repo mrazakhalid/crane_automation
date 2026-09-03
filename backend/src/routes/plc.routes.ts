@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import {
+  deleteLogs,
   getBatch,
   getCrane,
+  getLogs,
+  getPlant,
   getRead,
   getState,
   postBatchAck,
@@ -42,6 +45,9 @@ plcRouter.post('/send-batch', validate({ body: sendBatchSchema }), postSendBatch
 plcRouter.get('/batch-status', validate({ query: connectionQuerySchema }), getBatch);
 plcRouter.post('/batch-ack', validate({ query: connectionQuerySchema }), postBatchAck);
 plcRouter.get('/crane-view', validate({ query: connectionQuerySchema }), getCrane);
+plcRouter.get('/plant-view', getPlant);
+plcRouter.get('/logs', getLogs);
+plcRouter.delete('/logs', deleteLogs);
 
 plcRouter.post('/connect', requireRole('super_admin'), validate({ body: connectSchema }), postConnect);
 plcRouter.post('/disconnect', requireRole('super_admin'), postDisconnect);
