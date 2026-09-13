@@ -29,6 +29,7 @@ export function useProcess() {
   const [planning, setPlanning] = useState(false);
   const [starting, setStarting] = useState(false);
   const [sending, setSending] = useState(false);
+  const [controlling, setControlling] = useState(false);
   const pollRef = useRef<number | null>(null);
 
   /** Stop the status poll (idempotent). */
@@ -168,6 +169,46 @@ export function useProcess() {
     }
   }, [plan, notify]);
 
+  /**
+   * Send a live PLC control command (Stop or Clean) to every crane in the plan.
+   *
+   * Stop = immediate hold on each crane; Clean = home to Parking + wipe the recipe.
+   * Iterates the routed groups so only this recipe's cranes are affected. Unrouted
+   * groups (no PLC) are skipped.
+   */
+  const controlPlc = useCallback(
+    async (action: 'stop' | 'clean'): Promise<void> => {
+      if (!plan) return;
+      const targets: { connectionId: string; crane: string }[] = [];
+      for (const g of plan.groups) {
+        if (!g.connectionId) continue;
+        for (const chain of g.cranes) targets.push({ connectionId: g.connectionId, crane: chain.crane });
+      }
+      if (targets.length === 0) {
+        notify('No connected PLC for this recipe', 'error');
+        return;
+      }
+      setControlling(true);
+      try {
+        for (const t of targets) {
+          if (action === 'stop') await plcApi.stopPlc(t.connectionId, t.crane);
+          else await plcApi.cleanPlc(t.connectionId, t.crane);
+        }
+        notify(
+          action === 'stop'
+            ? 'Stop sent — crane(s) halted'
+            : 'Clean sent — crane(s) homing to Parking, recipe cleared',
+          'success',
+        );
+      } catch (err) {
+        notify(apiErrorMessage(err, `Could not ${action} the PLC`), 'error');
+      } finally {
+        setControlling(false);
+      }
+    },
+    [plan, notify],
+  );
+
   /** Stop and reset the current run. */
   const stop = useCallback(async (): Promise<void> => {
     stopPolling();
@@ -209,11 +250,14 @@ export function useProcess() {
     planning,
     starting,
     sending,
+    controlling,
     decode,
     divide,
     resolveAmbiguity,
     start,
     sendToPlc,
+    stopPlc: () => controlPlc('stop'),
+    cleanPlc: () => controlPlc('clean'),
     stop,
     loadRecipe,
     stateForStep,

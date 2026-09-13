@@ -2,51 +2,61 @@
 //  IOMap  —  PLC_3 (Line 3, cranes 4 & 5)  —  real %I/%Q ↔ crane DB mirrors
 //  FUNCTION (FC), SCL, return Void, no params. Call FIRST in OB1.
 //  Addresses from docs/plc/plant-panel-layout.md (PLC_3). Station = tank.number + 1.
+//
+//  ROLES (confirmed from the plant picture, East→West):
+//    Crane 4 = ENTRY  — loads at LOAD (East end), runs 1-16…15-2, parks P-4.
+//    Crane 5 = DOWNSTREAM — picks up at TRVL-3B (West), runs DRY-3A…3-1A, parks P-5.
+//  Direction is by physical position (see ./POSITION-MAP.md): mv_fwd=West, mv_rev=East.
 // ============================================================================
 
-// ============================ CRANE 4  (Crane4Data) — DOWNSTREAM =============
+// ============================ CRANE 4  (Crane4Data) — ENTRY crane ============
+//  Loads at the LOAD bay (station 1, physical East end). Tanks run West from there;
+//  Parking (P-4) sits West of its tanks.
 "Crane4Data".ls_mid    := %I0.3;      // LS_Mid_C4
 "Crane4Data".ls_up     := %I0.4;      // LS_Up_C4
 "Crane4Data".ls_dip    := %I0.5;      // LS_Down_C4
 "Crane4Data".estop     := %I0.0;      // E-Stop_SW_C4
 "Crane4Data".auto      := %I0.1;      // Auto_SW_C4
 "Crane4Data".btn_start := %I2.2;      // UP_Pendant_C4
-"Crane4Data".ls_at[0]  := %I1.7;      // PRK-3A     (Parking — crane 4 home; panel labels it PRK-3A, no _C4 suffix)
-"Crane4Data".ls_at[1]  := %I1.5;      // TRVL-3A_C4 (Loading = transfer pickup, downstream crane)
-"Crane4Data".ls_at[2]  := %I0.7;      // 1-16_C4
-"Crane4Data".ls_at[3]  := %I1.0;      // 1-15_C4
-"Crane4Data".ls_at[4]  := %I1.1;      // 1-14_C4
-"Crane4Data".ls_at[5]  := %I1.2;      // 1-13_C4
-"Crane4Data".ls_at[6]  := %I1.3;      // 1-12B_C4
-"Crane4Data".ls_at[7]  := %I1.4;      // 1-12A_C4
-"Crane4Data".ls_at[8]  := %I1.5;      // TRVL-3A_C4
-"Crane4Data".ls_at[9]  := %I1.6;      // 15-2_C4
+"Crane4Data".ls_at[0]  := %I1.7;      // PRK-3A_C4  (Parking — station 0)
+"Crane4Data".ls_at[1]  := %I2.0;      // LOAD-3A_C4 (Loading — entry bay)  [VERIFY on Panel_3]
+"Crane4Data".ls_at[2]  := %I0.7;      // 1-16_C4   (tank 1 -> station 2)
+"Crane4Data".ls_at[3]  := %I1.0;      // 1-15_C4   (tank 2 -> station 3)
+"Crane4Data".ls_at[4]  := %I1.1;      // 1-14_C4   (tank 3 -> station 4)
+"Crane4Data".ls_at[5]  := %I1.2;      // 1-13_C4   (tank 4 -> station 5)
+"Crane4Data".ls_at[6]  := %I1.3;      // 1-12B_C4  (tank 5 -> station 6)
+"Crane4Data".ls_at[7]  := %I1.4;      // 1-12A_C4  (tank 6 -> station 7)
+"Crane4Data".ls_at[8]  := %I1.5;      // TRVL-3A_C4 (tank 7 -> station 8)
+"Crane4Data".ls_at[9]  := %I1.6;      // 15-2_C4   (tank 8 -> station 9)
 %Q0.4 := "Crane4Data".mv_up;          // R-Up_C4
 %Q0.5 := "Crane4Data".mv_down;        // R-Down_C4
-%Q0.6 := "Crane4Data".mv_rev;         // R-East_C4
-%Q0.7 := "Crane4Data".mv_fwd;         // R-West_C4
+%Q0.6 := "Crane4Data".mv_rev;         // R-East_C4   (East = reverse / lower position)
+%Q0.7 := "Crane4Data".mv_fwd;         // R-West_C4   (West = forward / higher position)
 %Q1.0 := "Crane4Data".mv_up OR "Crane4Data".mv_down;     // R-Hoist_C4
 %Q1.1 := "Crane4Data".mv_fwd OR "Crane4Data".mv_rev;     // R-Trolley_C4
 
-// ============================ CRANE 5  (Crane5Data) — ENTRY crane ============
+// ============================ CRANE 5  (Crane5Data) — DOWNSTREAM =============
+//  No LOAD bay — Loading (station 1) is the transfer pickup at TRVL-3B (West end),
+//  the same switch as station 19. Its tanks run East of TRVL-3B; Parking (P-5) is
+//  the West-most box.
 "Crane5Data".ls_mid    := %I4.3;      // LS_Mid_C5
 "Crane5Data".ls_up     := %I4.4;      // LS_Up_C5
 "Crane5Data".ls_dip    := %I4.5;      // LS_Down_C5
 "Crane5Data".estop     := %I4.0;      // E-Stop_SW_C5
 "Crane5Data".auto      := %I4.1;      // Auto_SW_C5
 "Crane5Data".btn_start := %I6.3;      // UP_Pendant_C5
-"Crane5Data".ls_at[0]  := %I5.7;      // PRK-3B_C5 (parking)
-"Crane5Data".ls_at[1]  := %I4.6;      // LOAD-3A_C5 (Loading)
-"Crane5Data".ls_at[10] := %I4.7;      // DRY-3A_C5
-"Crane5Data".ls_at[11] := %I5.0;      // 3-4A_C5
-"Crane5Data".ls_at[12] := %I5.1;      // INS-3A_C5
-"Crane5Data".ls_at[13] := %I5.2;      // 6-2_C5
-"Crane5Data".ls_at[14] := %I5.3;      // 6-1_C5
-"Crane5Data".ls_at[15] := %I5.4;      // 3-3_C5
-"Crane5Data".ls_at[16] := %I5.5;      // 3-2_C5
-"Crane5Data".ls_at[17] := %I5.6;      // 3-1B_C5
-"Crane5Data".ls_at[18] := %I6.0;      // 3-1A_C5
-"Crane5Data".ls_at[19] := %I7.0;      // TRVL-3B_C5
+"Crane5Data".ls_at[0]  := %I5.7;      // PRK-3B_C5  (Parking — station 0)
+"Crane5Data".ls_at[1]  := %I7.0;      // TRVL-3B_C5 (Loading = transfer pickup; same as station 19)
+"Crane5Data".ls_at[10] := %I4.7;      // DRY-3A_C5  (tank 9  -> station 10)
+"Crane5Data".ls_at[11] := %I5.0;      // 3-4A_C5    (tank 10 -> station 11)
+"Crane5Data".ls_at[12] := %I5.1;      // INS-3A_C5  (tank 11 -> station 12)
+"Crane5Data".ls_at[13] := %I5.2;      // 6-2_C5     (tank 12 -> station 13)
+"Crane5Data".ls_at[14] := %I5.3;      // 6-1_C5     (tank 13 -> station 14)
+"Crane5Data".ls_at[15] := %I5.4;      // 3-3_C5     (tank 14 -> station 15)
+"Crane5Data".ls_at[16] := %I5.5;      // 3-2_C5     (tank 15 -> station 16)
+"Crane5Data".ls_at[17] := %I5.6;      // 3-1B_C5    (tank 16 -> station 17)
+"Crane5Data".ls_at[18] := %I6.0;      // 3-1A_C5    (tank 17 -> station 18)
+"Crane5Data".ls_at[19] := %I7.0;      // TRVL-3B_C5 (tank 18 -> station 19; = Loading pickup)
 %Q2.4 := "Crane5Data".mv_up;          // R-Up_C5
 %Q2.5 := "Crane5Data".mv_down;        // R-Down_C5
 %Q2.6 := "Crane5Data".mv_rev;         // R-East_C5

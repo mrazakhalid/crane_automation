@@ -1,4 +1,15 @@
-import { CheckCircle2, Circle, Cpu, Loader, Play, SendHorizontal, ServerOff, Square } from 'lucide-react';
+import {
+  CheckCircle2,
+  Circle,
+  Cpu,
+  Loader,
+  Octagon,
+  Play,
+  RotateCcw,
+  SendHorizontal,
+  ServerOff,
+  Square,
+} from 'lucide-react';
 import { Spinner } from './Spinner.js';
 import type { ProcessPlan, RunStatus, RunTaskState } from '../types/process.js';
 
@@ -24,8 +35,11 @@ export function ProcessSummary({
   running,
   starting,
   sending,
+  controlling,
   stateForStep,
   onSendToPlc,
+  onStopPlc,
+  onCleanPlc,
   onStart,
   onStop,
 }: {
@@ -34,8 +48,11 @@ export function ProcessSummary({
   running: boolean;
   starting: boolean;
   sending: boolean;
+  controlling: boolean;
   stateForStep: (step: number) => RunTaskState;
   onSendToPlc: () => void;
+  onStopPlc: () => void;
+  onCleanPlc: () => void;
   onStart: () => void;
   onStop: () => void;
 }) {
@@ -62,6 +79,24 @@ export function ProcessSummary({
             title={canSend ? 'Write the tasks to the real PLC(s) and run — watch it on the Plant view' : 'No crane on these tasks is assigned to a connected PLC'}
           >
             {sending ? <Spinner label="Sending" /> : (<><SendHorizontal size={16} aria-hidden /> Send to PLC</>)}
+          </button>
+          <button
+            type="button"
+            className="btn btn--danger"
+            onClick={onStopPlc}
+            disabled={controlling || !canSend}
+            title="Emergency stop — halt this recipe's crane(s) on the PLC immediately"
+          >
+            <Octagon size={16} aria-hidden /> Stop
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={onCleanPlc}
+            disabled={controlling || !canSend}
+            title="Clean — send the crane(s) home to Parking and clear the recipe on the PLC"
+          >
+            {controlling ? <Spinner label="Working" /> : (<><RotateCcw size={16} aria-hidden /> Clean</>)}
           </button>
           {running ? (
             <button type="button" className="btn btn--danger" onClick={onStop}>

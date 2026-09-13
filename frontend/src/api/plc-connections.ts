@@ -73,6 +73,22 @@ export async function disconnectConnection(id: string): Promise<PlcStatus> {
   return data.status;
 }
 
+/** POST /plc/stop — emergency-stop all of this connection's cranes immediately. */
+export async function stopConnection(id: string): Promise<string[]> {
+  const { data } = await apiClient.post<{ ok: boolean; cranes: string[] }>('/plc/stop', {
+    connectionId: id,
+  });
+  return data.cranes;
+}
+
+/** POST /plc/clean — send this connection's cranes home to Parking and wipe the recipe. */
+export async function cleanConnection(id: string): Promise<string[]> {
+  const { data } = await apiClient.post<{ ok: boolean; cranes: string[] }>('/plc/clean', {
+    connectionId: id,
+  });
+  return data.cranes;
+}
+
 /* ---------------------------------- Tags ---------------------------------- */
 
 /** GET /plc-connections/:id/tags — list a connection's tags. */

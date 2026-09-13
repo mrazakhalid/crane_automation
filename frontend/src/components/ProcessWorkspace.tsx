@@ -72,8 +72,14 @@ export function ProcessWorkspace() {
             running={p.running}
             starting={p.starting}
             sending={p.sending}
+            controlling={p.controlling}
             stateForStep={p.stateForStep}
             onSendToPlc={() => void p.sendToPlc()}
+            onStopPlc={() => void p.stopPlc()}
+            onCleanPlc={() => {
+              if (window.confirm('Send the crane(s) home to Parking and clear the recipe on the PLC?'))
+                void p.cleanPlc();
+            }}
             onStart={() => void p.start()}
             onStop={() => void p.stop()}
           />

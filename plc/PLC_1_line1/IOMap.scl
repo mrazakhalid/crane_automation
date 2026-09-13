@@ -38,12 +38,8 @@
 "Crane1BData".estop     := %I4.0;     // E-Stop_SW_C1B
 "Crane1BData".auto      := %I4.1;     // Auto_SW_C1B
 "Crane1BData".btn_start := %I5.0;     // UP_Pendant_C1B
-"Crane1BData".ls_at[0]  := %I5.2;     // PRK-1A_C1B (parking — VERIFY)
-// TODO (field decision) — 1B is downstream and collects at TRVL-1A, but Panel_1
-// wires TRVL-1A only on crane 1A's card (%I3.0), with NO pickup switch on 1B's
-// input card. Options: (a) cross-wire TRVL-1A into a spare 1B input, or (b) add a
-// dedicated 1B pickup switch. Then map it here:
-//   "Crane1BData".ls_at[1] := %I?.?;   // transfer pickup (Loading)
+"Crane1BData".ls_at[0]  := %I5.2;     // PRK-1B_C1B (Parking — station 0 — VERIFY)
+"Crane1BData".ls_at[1]  := %I5.7;     // TRVL-1A pickup (Loading = transfer from 1A)  [VERIFY: 1B pickup switch on Panel_1; 1A's TRVL-1A is %I3.0]
 "Crane1BData".ls_at[12] := %I5.3;     // 7-1_C1B
 "Crane1BData".ls_at[13] := %I5.4;     // 7-2_C1B
 "Crane1BData".ls_at[14] := %I5.5;     // 14-2_C1B

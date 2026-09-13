@@ -90,6 +90,21 @@ if not defined msg (
 )
 git -C "%ROOT%" add -A
 git -C "%ROOT%" commit -m "%msg%"
+if errorlevel 1 (
+  echo.
+  echo Commit failed - nothing pushed.
+  goto after
+)
+echo.
+set "dopush="
+set /p "dopush=Push to remote now? [y/N]: "
+if /i "%dopush%"=="y" (
+  echo.
+  echo === Pushing ===
+  git -C "%ROOT%" push
+) else (
+  echo Skipped push.
+)
 goto after
 
 :open

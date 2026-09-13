@@ -2,50 +2,60 @@
 //  IOMap  —  PLC_2 (Line 2, cranes 2 & 3)  —  real %I/%Q ↔ crane DB mirrors
 //  FUNCTION (FC), SCL, return Void, no params. Call FIRST in OB1.
 //  Addresses from docs/plc/plant-panel-layout.md (PLC_2). Station = tank.number + 1.
+//
+//  ROLES (confirmed from the plant picture, East→West):
+//    Crane 2 = ENTRY  — loads at LOAD (East end), runs 15-3…4-6A, parks P-2.
+//    Crane 3 = DOWNSTREAM — picks up at TRVL-2A (West), runs DRY-2A…4-6B, parks P-3.
+//  Direction is by physical position (see ./POSITION-MAP.md): mv_fwd=West, mv_rev=East.
 // ============================================================================
 
-// ============================ CRANE 2  (Crane2Data) — DOWNSTREAM =============
+// ============================ CRANE 2  (Crane2Data) — ENTRY crane ============
+//  Loads at the LOAD bay (station 1, physical East end). Tanks run West from there;
+//  Parking (P-2) sits West of its tanks.
 "Crane2Data".ls_mid    := %I4.3;      // LS_Mid_C2
 "Crane2Data".ls_up     := %I4.4;      // LS_Up_C2
 "Crane2Data".ls_dip    := %I4.5;      // LS_Down_C2
 "Crane2Data".estop     := %I4.0;      // E-Stop_SW_C2
 "Crane2Data".auto      := %I4.1;      // Auto_SW_C2
 "Crane2Data".btn_start := %I5.0;      // UP_Pendant_C2
-"Crane2Data".ls_at[0]  := %I5.2;      // PRK-2A_C2 (parking)
-"Crane2Data".ls_at[1]  := %I6.0;      // 4-6A_C2 (Loading = transfer pickup; same switch as station 7)
-"Crane2Data".ls_at[2]  := %I5.3;      // 15-3_C2
-"Crane2Data".ls_at[3]  := %I5.4;      // 4-7_C2
-"Crane2Data".ls_at[4]  := %I5.5;      // 4-9_C2
-"Crane2Data".ls_at[5]  := %I5.6;      // INS-2A_C2
-"Crane2Data".ls_at[6]  := %I5.7;      // 4-10_C2
-"Crane2Data".ls_at[7]  := %I6.0;      // 4-6A_C2
+"Crane2Data".ls_at[0]  := %I5.2;      // PRK-2A_C2  (Parking — station 0)
+"Crane2Data".ls_at[1]  := %I6.1;      // LOAD-2A_C2 (Loading — entry bay)  [VERIFY on Panel_2]
+"Crane2Data".ls_at[2]  := %I5.3;      // 15-3_C2   (tank 1 -> station 2)
+"Crane2Data".ls_at[3]  := %I5.4;      // 4-7_C2    (tank 2 -> station 3)
+"Crane2Data".ls_at[4]  := %I5.5;      // 4-9_C2    (tank 3 -> station 4)
+"Crane2Data".ls_at[5]  := %I5.6;      // INS-2A_C2 (tank 4 -> station 5)
+"Crane2Data".ls_at[6]  := %I5.7;      // 4-10_C2   (tank 5 -> station 6)
+"Crane2Data".ls_at[7]  := %I6.0;      // 4-6A_C2   (tank 6 -> station 7)
 %Q1.6 := "Crane2Data".mv_up;          // R-Up_C2
 %Q1.7 := "Crane2Data".mv_down;        // R-Down_C2
-%Q2.0 := "Crane2Data".mv_rev;         // R-East_C2
-%Q2.1 := "Crane2Data".mv_fwd;         // R-West_C2
+%Q2.0 := "Crane2Data".mv_rev;         // R-East_C2   (East = reverse / lower position)
+%Q2.1 := "Crane2Data".mv_fwd;         // R-West_C2   (West = forward / higher position)
 %Q2.2 := "Crane2Data".mv_up OR "Crane2Data".mv_down;     // R-Hoist_C2
 %Q2.3 := "Crane2Data".mv_fwd OR "Crane2Data".mv_rev;     // R-Trolley_C2
 
-// ============================ CRANE 3  (Crane3Data) — ENTRY crane ============
+// ============================ CRANE 3  (Crane3Data) — DOWNSTREAM =============
+//  No LOAD bay — Loading (station 1) is the transfer pickup at TRVL-2A (West end),
+//  the same switch as station 18. Its tanks run East of TRVL-2A; Parking (P-3) is
+//  the West-most box.
 "Crane3Data".ls_mid    := %I0.3;      // LS_Mid_C3
 "Crane3Data".ls_up     := %I0.4;      // LS_Up_C3
 "Crane3Data".ls_dip    := %I0.5;      // LS_Down_C3
 "Crane3Data".estop     := %I0.0;      // E-Stop_SW_C3
 "Crane3Data".auto      := %I0.1;      // Auto_SW_C3
 "Crane3Data".btn_start := %I1.0;      // UP_Pendant_C3
-"Crane3Data".ls_at[0]  := %I2.7;      // PRK-2B_C3 (parking)
-"Crane3Data".ls_at[1]  := %I1.2;      // LOAD-2A_C3 (Loading; LOAD-2B/2C/2D = I1.3/1.4/1.5)
-"Crane3Data".ls_at[8]  := %I1.6;      // DRY-2A_C3
-"Crane3Data".ls_at[9]  := %I1.7;      // 4-8_C3
-"Crane3Data".ls_at[10] := %I2.0;      // 4-1_C3
-"Crane3Data".ls_at[11] := %I2.1;      // 4-2_C3
-"Crane3Data".ls_at[12] := %I2.2;      // 4-3_C3
-"Crane3Data".ls_at[13] := %I2.3;      // 4-4_C3
-"Crane3Data".ls_at[14] := %I2.4;      // 4-5_C3
-"Crane3Data".ls_at[15] := %I2.5;      // INS-2B_C3
-"Crane3Data".ls_at[16] := %I2.6;      // 4-11_C3
-"Crane3Data".ls_at[17] := %I3.0;      // 4-6B_C3
-"Crane3Data".ls_at[18] := %I3.1;      // TRVL-2A_C3
+"Crane3Data".ls_at[0]  := %I2.7;      // PRK-2B_C3  (Parking — station 0)
+"Crane3Data".ls_at[1]  := %I3.1;      // TRVL-2A_C3 (Loading = transfer pickup; same as station 18)
+"Crane3Data".ls_at[8]  := %I1.6;      // DRY-2A_C3 (tank 7  -> station 8)
+"Crane3Data".ls_at[9]  := %I1.7;      // 4-8_C3    (tank 8  -> station 9)
+"Crane3Data".ls_at[10] := %I2.0;      // 4-1_C3    (tank 9  -> station 10)
+"Crane3Data".ls_at[11] := %I2.1;      // 4-2_C3    (tank 10 -> station 11)
+"Crane3Data".ls_at[12] := %I2.2;      // 4-3_C3    (tank 11 -> station 12)
+"Crane3Data".ls_at[13] := %I2.3;      // 4-4_C3    (tank 12 -> station 13)
+"Crane3Data".ls_at[14] := %I2.4;      // 4-5_C3    (tank 13 -> station 14)
+"Crane3Data".ls_at[15] := %I2.5;      // INS-2B_C3 (tank 14 -> station 15)
+"Crane3Data".ls_at[16] := %I2.6;      // 4-11_C3   (tank 15 -> station 16)
+"Crane3Data".ls_at[17] := %I3.0;      // 4-6B_C3   (tank 16 -> station 17)
+"Crane3Data".ls_at[18] := %I3.1;      // TRVL-2A_C3 (tank 17 -> station 18; = Loading pickup)
 %Q0.4 := "Crane3Data".mv_up;          // R-Up_C3
 %Q0.5 := "Crane3Data".mv_down;        // R-Down_C3
 %Q0.6 := "Crane3Data".mv_rev;         // R-East_C3

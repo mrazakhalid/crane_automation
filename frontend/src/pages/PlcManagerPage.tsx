@@ -20,8 +20,20 @@ type Tab = 'connections' | 'new';
  *   page-nav bar; content is centered in the workspace below.
  */
 export function PlcManagerPage() {
-  const { connections, statuses, pendingId, loading, create, update, remove, activate, connect, disconnect } =
-    usePlcConnections();
+  const {
+    connections,
+    statuses,
+    pendingId,
+    loading,
+    create,
+    update,
+    remove,
+    activate,
+    connect,
+    disconnect,
+    stop,
+    clean,
+  } = usePlcConnections();
   const { lines } = useLines();
   const [tab, setTab] = useState<Tab>('connections');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -71,6 +83,11 @@ export function PlcManagerPage() {
                 onConnect={(c) => void connect(c.id)}
                 onDisconnect={(c) => void disconnect(c.id)}
                 onActivate={(c) => void activate(c.id)}
+                onStop={(c) => void stop(c.id)}
+                onClean={(c) => {
+                  if (window.confirm(`Send ${c.name}'s crane(s) home to Parking and clear the recipe?`))
+                    void clean(c.id);
+                }}
                 onEdit={setEditing}
                 onDelete={onDelete}
               />

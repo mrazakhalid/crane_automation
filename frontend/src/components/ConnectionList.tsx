@@ -1,4 +1,14 @@
-import { CheckCircle2, Pencil, Plug, PlugZap, Power, Settings2, Trash2 } from 'lucide-react';
+import {
+  CheckCircle2,
+  Octagon,
+  Pencil,
+  Plug,
+  PlugZap,
+  Power,
+  RotateCcw,
+  Settings2,
+  Trash2,
+} from 'lucide-react';
 import { Spinner } from './Spinner.js';
 import type { Line } from '../types/line.js';
 import type { PlcConnectionConfig, PlcStatus } from '../types/plc-config.js';
@@ -42,6 +52,8 @@ export function ConnectionList({
   onConnect,
   onDisconnect,
   onActivate,
+  onStop,
+  onClean,
   onEdit,
   onDelete,
 }: {
@@ -55,6 +67,8 @@ export function ConnectionList({
   onConnect: (c: PlcConnectionConfig) => void;
   onDisconnect: (c: PlcConnectionConfig) => void;
   onActivate: (c: PlcConnectionConfig) => void;
+  onStop: (c: PlcConnectionConfig) => void;
+  onClean: (c: PlcConnectionConfig) => void;
   onEdit: (c: PlcConnectionConfig) => void;
   onDelete: (c: PlcConnectionConfig) => void;
 }) {
@@ -138,6 +152,28 @@ export function ConnectionList({
                 >
                   {busy ? <Spinner size={14} label="…" /> : <Plug size={14} aria-hidden />} Connect
                 </button>
+              )}
+              {connected && (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn--sm btn--danger"
+                    onClick={() => onStop(c)}
+                    disabled={busy}
+                    title="Emergency stop — halt this PLC's cranes immediately"
+                  >
+                    <Octagon size={14} aria-hidden /> Stop
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--sm"
+                    onClick={() => onClean(c)}
+                    disabled={busy}
+                    title="Send cranes home to Parking and clear the recipe"
+                  >
+                    <RotateCcw size={14} aria-hidden /> Clean
+                  </button>
+                </>
               )}
               {!c.isActive && (
                 <button

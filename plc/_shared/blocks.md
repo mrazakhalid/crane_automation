@@ -69,6 +69,17 @@ Add new block → **Data block (DB)** → **Global**, **Optimized access ON**. N
 | `estop` | `Bool` | E-Stop input mirror (interlock = follow-up) |
 | `auto` | `Bool` | Auto-mode input mirror |
 
+**Physical position map** (direction is by position, NOT station number)
+| Name | Data type | Notes |
+|---|---|---|
+| `pos` | `Array[0..20] of Int` | physical left→right position of each station (`pos[s]`); 1 = East-most, larger = further West. The sequencer travels WEST toward a HIGHER `pos`, EAST toward a LOWER one. Set per crane (see the PLC's position-map doc). Unused stations = 0. |
+
+> **Why `pos` exists:** the plant is not laid out in station-number order — Parking sits West of
+> Loading, and a downstream crane's Loading is a transfer tank at the far West end. Deciding
+> direction by station number therefore drives the wrong way out of/into Parking (and, for a
+> downstream crane, Loading↔tanks). `TravelTo` now compares `pos[]` values instead. Example
+> (Line 4): [`../PLC_4_line4/POSITION-MAP.md`](../PLC_4_line4/POSITION-MAP.md).
+
 > `ls_at` is `[0..20]` (Line 4 max station is 18; other lines up to 20). Only the crane's own tank
 > indices are wired — the rest stay FALSE and are never targeted (the app sends a crane only its
 > own tanks). **Tick *Accessible* + *Writable from HMI/OPC UA*** on every app-written row
@@ -81,20 +92,22 @@ Add new block → **Data block (DB)** → **Global**, **Optimized access ON**. N
 ## 3) FC `TravelTo` — direction picker (create once per PLC, SCL)
 
 Interface — **Input:** `target:Int`, `cur:Int`, `atTarget:Bool`; **Output:** `fwd:Bool`, `rev:Bool`;
-**Return:** `TravelTo:Bool`. Body:
+**Return:** `TravelTo:Bool`. Body (unchanged — but the caller now passes **physical positions**
+`pos[target]` / `pos[cur]`, not raw station numbers):
 
 ```scl
-// TravelTo — pick the travel direction toward a target station.
-// Returns TRUE when the target limit switch is already made (arrived → stop).
+// TravelTo — pick the travel direction toward a target.
+// #target / #cur are PHYSICAL POSITIONS (pos[]), not station numbers — the sequencer passes
+// #d.pos[station]. Returns TRUE when the target limit switch is already made (arrived → stop).
 #fwd := FALSE;
 #rev := FALSE;
 
 IF #atTarget THEN
     ;                       // arrived: leave both motors off
 ELSIF #target > #cur THEN
-    #fwd := TRUE;           // higher station number → travel forward (West; IOMap → R-West)
+    #fwd := TRUE;           // higher position → travel West (forward; IOMap → R-West)
 ELSE
-    #rev := TRUE;           // lower station number → travel reverse (East; IOMap → R-East)
+    #rev := TRUE;           // lower position → travel East (reverse; IOMap → R-East)
 END_IF;
 
 #TravelTo := #atTarget;
@@ -102,7 +115,15 @@ END_IF;
 
 ---
 
-## 4) FB `Crane<ID>_Seq` — the sequencer (copy per crane, SCL)
+## 4) FB `CraneSequencer` — the sequencer
+
+> **SOURCE OF TRUTH = [`./CraneSequencer.scl`](./CraneSequencer.scl)** — the current **generic**
+> block: one FB reused by every crane via the InOut `d : "typeCraneData"`, with **position-based
+> direction** (`#d.pos[…]`). Do NOT copy-per-crane / find-replace `Line4Data` any more — that's the
+> older form kept below only as historical reference. Create the DBs "of type `typeCraneData`" and
+> call `CraneSequencer(d := "Crane<ID>Data")` per crane in OB1 (see each PLC's BUILD-STEPS).
+
+### (historical) old per-crane form — `Crane<ID>_Seq` (copy per crane, SCL)
 
 Add new block → **Function block (FB)**, **SCL**, name `Crane<ID>_Seq` (e.g. `Crane6_Seq`).
 **Static** members: `state:Int`, `idx:Int`, `count:Int`, `cur:Int`, `prevSend:Bool`,

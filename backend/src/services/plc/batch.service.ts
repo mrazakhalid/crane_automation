@@ -353,6 +353,42 @@ async function dispatchWrites(writes: BatchWrite[], connectionId: string, db: st
   );
 }
 
+/**
+ * Emergency-STOP one or more cranes (immediate hold).
+ *
+ * Purpose: Write `cmd_stop = TRUE` to each crane's DB; the sequencer honours it at
+ *   the top of every scan — all motors off, latched in the STOPPED state. It does
+ *   NOT clear the recipe (use `cleanCranes` to home + wipe).
+ * Args: connectionId — the PLC session; cranes — crane codes to stop (empty → the
+ *   env default DB, for a legacy single-DB connection).
+ * Raises: 409 if not connected; 502 on an OPC UA write failure.
+ */
+export async function stopCranes(connectionId: string, cranes: string[]): Promise<void> {
+  const targets = cranes.length > 0 ? cranes : [undefined];
+  for (const crane of targets) {
+    await writeNode(scalarNode('cmd_stop', optsForCrane(crane)), 'Boolean', true, connectionId);
+  }
+}
+
+/**
+ * CLEAN / reset one or more cranes to their home + a blank recipe.
+ *
+ * Purpose: Clear any stop, then arm `cmd_reset = TRUE`; the sequencer lifts the
+ *   hoist clear, travels to Parking, wipes the recipe (task_count, sts flags, cmd_send),
+ *   and returns to IDLE — "as if no recipe was ever sent, crane back home."
+ * Args: connectionId — the PLC session; cranes — crane codes to clean (empty → the
+ *   env default DB).
+ * Raises: 409 if not connected; 502 on an OPC UA write failure.
+ */
+export async function cleanCranes(connectionId: string, cranes: string[]): Promise<void> {
+  const targets = cranes.length > 0 ? cranes : [undefined];
+  for (const crane of targets) {
+    const opts = optsForCrane(crane);
+    await writeNode(scalarNode('cmd_stop', opts), 'Boolean', false, connectionId);
+    await writeNode(scalarNode('cmd_reset', opts), 'Boolean', true, connectionId);
+  }
+}
+
 /** The PLC's handshake snapshot the UI polls while a batch runs. */
 export interface BatchStatus {
   busy: boolean;

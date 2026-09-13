@@ -67,6 +67,16 @@ export async function sendBatch(lineId: string, qr: string): Promise<SendBatchRe
   return data;
 }
 
+/** POST /plc/stop — emergency-stop a PLC's cranes now (one crane, or all if `crane` omitted). */
+export async function stopPlc(connectionId: string, crane?: string): Promise<void> {
+  await apiClient.post('/plc/stop', crane ? { connectionId, crane } : { connectionId });
+}
+
+/** POST /plc/clean — send a PLC's cranes home to Parking and wipe the recipe. */
+export async function cleanPlc(connectionId: string, crane?: string): Promise<void> {
+  await apiClient.post('/plc/clean', crane ? { connectionId, crane } : { connectionId });
+}
+
 /** GET /plc/batch-status — read the crane run handshake (busy / done / step). */
 export async function getBatchStatus(): Promise<BatchStatus> {
   const { data } = await apiClient.get<BatchStatus>('/plc/batch-status');

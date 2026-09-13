@@ -6,11 +6,24 @@ import {
   readNode,
   sendCommand,
 } from '../services/plc/plc.service.js';
-import { ackBatch, getBatchStatus, getCraneView, sendBatch } from '../services/plc/batch.service.js';
+import {
+  ackBatch,
+  cleanCranes,
+  getBatchStatus,
+  getCraneView,
+  sendBatch,
+  stopCranes,
+} from '../services/plc/batch.service.js';
 import { getPlantView } from '../services/plant-view.service.js';
 import { clear as clearPlcLog, getRecent } from '../services/plc/plc-log.js';
 import * as connRepo from '../repositories/plc-connection.repository.js';
-import type { CommandInput, ConnectInput, ReadQuery, SendBatchInput } from '../schemas/plc.schema.js';
+import type {
+  CommandInput,
+  ConnectInput,
+  CraneCommandInput,
+  ReadQuery,
+  SendBatchInput,
+} from '../schemas/plc.schema.js';
 
 /**
  * PLC controllers (wired behind auth/role middleware).
@@ -141,6 +154,43 @@ export async function postBatchAck(req: Request, res: Response, next: NextFuncti
 export async function getCrane(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     res.status(200).json(await getCraneView(connectionIdQuery(req), craneQuery(req)));
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** The cranes bound to a saved connection (empty for a legacy single-DB connection). */
+async function cranesForConnection(connectionId: string): Promise<string[]> {
+  const all = await connRepo.listAll();
+  return all.find((c) => c._id === connectionId)?.cranes ?? [];
+}
+
+/**
+ * POST /api/plc/stop — emergency-stop a PLC's cranes immediately. Body
+ * `{ connectionId, crane? }`: `crane` targets one crane, omit for all cranes on the
+ * connection. Returns 200 `{ ok, cranes }`.
+ */
+export async function postStop(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { connectionId, crane } = req.body as CraneCommandInput;
+    const cranes = crane ? [crane] : await cranesForConnection(connectionId);
+    await stopCranes(connectionId, cranes);
+    res.status(200).json({ ok: true, cranes });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/plc/clean — send a PLC's cranes home to Parking and wipe the recipe.
+ * Body `{ connectionId, crane? }`. Returns 200 `{ ok, cranes }`.
+ */
+export async function postClean(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { connectionId, crane } = req.body as CraneCommandInput;
+    const cranes = crane ? [crane] : await cranesForConnection(connectionId);
+    await cleanCranes(connectionId, cranes);
+    res.status(200).json({ ok: true, cranes });
   } catch (err) {
     next(err);
   }

@@ -8,10 +8,12 @@ import {
   getRead,
   getState,
   postBatchAck,
+  postClean,
   postCommand,
   postConnect,
   postDisconnect,
   postSendBatch,
+  postStop,
 } from '../controllers/plc.controller.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -19,6 +21,7 @@ import {
   commandSchema,
   connectSchema,
   connectionQuerySchema,
+  craneCommandSchema,
   readQuerySchema,
   sendBatchSchema,
 } from '../schemas/plc.schema.js';
@@ -42,6 +45,8 @@ plcRouter.get('/read', validate({ query: readQuerySchema }), getRead);
 // Crane batch flow (manager): send a recipe, poll the run, acknowledge on done.
 // The read/ack endpoints take an optional ?connectionId= to target a specific PLC.
 plcRouter.post('/send-batch', validate({ body: sendBatchSchema }), postSendBatch);
+plcRouter.post('/stop', validate({ body: craneCommandSchema }), postStop);
+plcRouter.post('/clean', validate({ body: craneCommandSchema }), postClean);
 plcRouter.get('/batch-status', validate({ query: connectionQuerySchema }), getBatch);
 plcRouter.post('/batch-ack', validate({ query: connectionQuerySchema }), postBatchAck);
 plcRouter.get('/crane-view', validate({ query: connectionQuerySchema }), getCrane);

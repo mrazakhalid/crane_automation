@@ -27,6 +27,14 @@ const endpoint = z
 /** The subset of OPC UA data types the write endpoint accepts. */
 const writeDataType = z.enum(['Boolean', 'Int16', 'UInt16', 'Int32', 'Float', 'Double']);
 
+/** A crane code, e.g. `6`, `7A`, `1B` (letters, numbers, hyphen). */
+const craneCode = z
+  .string()
+  .trim()
+  .min(1)
+  .max(10)
+  .regex(/^[A-Za-z0-9-]+$/, 'Crane code: letters, numbers, hyphen only');
+
 /** OPC UA security mode/policy (must match one the target server advertises). */
 const securityMode = z.enum(['None', 'Sign', 'SignAndEncrypt']);
 const securityPolicy = z.enum([
@@ -84,12 +92,17 @@ export type SendBatchInput = z.infer<typeof sendBatchSchema>;
  */
 export const connectionQuerySchema = z.strictObject({
   connectionId: z.uuid().optional(),
-  crane: z
-    .string()
-    .trim()
-    .min(1)
-    .max(10)
-    .regex(/^[A-Za-z0-9-]+$/, 'Crane code: letters, numbers, hyphen only')
-    .optional(),
+  crane: craneCode.optional(),
 });
 export type ConnectionQuery = z.infer<typeof connectionQuerySchema>;
+
+/**
+ * POST /api/plc/stop | /api/plc/clean — crane control on a connected PLC.
+ * `connectionId` picks the PLC; `crane` (optional) targets one crane's DB — omit to
+ * apply to ALL cranes bound to that connection. Stop = immediate hold; Clean = home + wipe.
+ */
+export const craneCommandSchema = z.strictObject({
+  connectionId: z.uuid(),
+  crane: craneCode.optional(),
+});
+export type CraneCommandInput = z.infer<typeof craneCommandSchema>;

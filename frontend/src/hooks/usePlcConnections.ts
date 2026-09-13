@@ -90,6 +90,36 @@ export function usePlcConnections() {
     [notify],
   );
 
+  const stop = useCallback(
+    async (id: string): Promise<void> => {
+      setPendingId(id);
+      try {
+        await api.stopConnection(id);
+        notify('Stop sent — crane(s) halted', 'success');
+      } catch (err) {
+        notify(apiErrorMessage(err, 'Could not stop the crane(s)'), 'error');
+      } finally {
+        setPendingId(null);
+      }
+    },
+    [notify],
+  );
+
+  const clean = useCallback(
+    async (id: string): Promise<void> => {
+      setPendingId(id);
+      try {
+        await api.cleanConnection(id);
+        notify('Clean sent — crane(s) homing to Parking, recipe cleared', 'success');
+      } catch (err) {
+        notify(apiErrorMessage(err, 'Could not clean the PLC'), 'error');
+      } finally {
+        setPendingId(null);
+      }
+    },
+    [notify],
+  );
+
   const create = useCallback(
     async (input: ConnectionInput): Promise<boolean> => {
       try {
@@ -167,5 +197,7 @@ export function usePlcConnections() {
     activate,
     connect,
     disconnect,
+    stop,
+    clean,
   };
 }

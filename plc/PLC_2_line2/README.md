@@ -4,8 +4,14 @@ Endpoint `opc.tcp://192.168.0.112:4840`, namespace **3**, CPU `6ES7511-1AK02`.
 
 | Crane | Data DB | FB | Role |
 |---|---|---|---|
-| 2 | `Crane2Data` | `Crane2_Seq` | downstream (no LOAD bay) |
-| 3 | `Crane3Data` | `Crane3_Seq` | entry (LOAD + TRVL-2A) |
+| 2 | `Crane2Data` | (generic `CraneSequencer`, inst `Crane2_Seq_DB`) | **entry** — loads at LOAD (East), runs 15-3…4-6A, parks P-2 |
+| 3 | `Crane3Data` | (generic `CraneSequencer`, inst `Crane3_Seq_DB`) | **downstream** — picks up at TRVL-2A (West), runs DRY-2A…4-6B, parks P-3 |
+
+> **Roles corrected 2026-09-13** (were reversed in the first draft). Confirmed from the plant
+> picture + physics (East crane owns LOAD, West crane owns the transfer tank). Direction is by
+> physical position — see [`./POSITION-MAP.md`](./POSITION-MAP.md). Build with the generic library
+> blocks; a DB *of type* `typeCraneData` per crane; `pos[]` per the map; call
+> `CraneSequencer(d := "Crane2Data")` / `(d := "Crane3Data")` in OB1.
 
 **Build:** shared blocks (`../_shared/blocks.md`) once; copy DB + FB per crane (rename `Line4Data`
 → `Crane2Data`/`Crane3Data`); paste [`IOMap.scl`](./IOMap.scl); wire OB1 ([`OB1.md`](./OB1.md)).

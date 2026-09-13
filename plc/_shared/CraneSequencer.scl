@@ -1,0 +1,195 @@
+// ============================================================================
+//  CraneSequencer  —  GENERIC per-crane batch sequencer  (LIBRARY block)
+// ----------------------------------------------------------------------------
+//  ONE function block reused by EVERY crane on EVERY PLC. Call once per scan
+//  from OB1, passing that crane's data block as the InOut #d. No copy, no
+//  find/replace — the crane it drives is chosen entirely by which DB you pass.
+//
+//  Block type : FUNCTION BLOCK (FB), language SCL.
+//  InOut      : d : "typeCraneData"           // the whole crane interface (a DB of this UDT)
+//  Static     : state:Int, idx:Int, count:Int, cur:Int, prevSend:Bool,
+//               tHold:TON_TIME, tDwell:TON_TIME
+//  Temp       : target:Int, arrived:Bool
+//
+//  OB1 (per crane):  CraneSequencer(d := "Crane6Data")   // its own instance DB
+//                    CraneSequencer(d := "Crane7AData")
+//
+//  Stations: 0=Parking  1=Loading  2..N = tanks (tank number + 1).
+//  States : 0 IDLE · 10 GO_LOAD · 20 LOWER_LOAD · 30 WAIT_BTN · 40 LIFT_LOAD
+//           50 GO_TANK · 60 LOWER_TANK · 70 DWELL · 80 LIFT_TANK · 85 GO_PARK · 90 DONE
+//
+//  DIRECTION IS BY PHYSICAL POSITION, NOT STATION NUMBER.
+//  The plant is NOT laid out in station-number order: Parking sits WEST of Loading, and a
+//  downstream crane's Loading is a transfer tank at the far (West) end. So travel direction
+//  is decided from #d.pos[station] — the physical left→right position of each station
+//  (1 = East-most … larger = further West). TravelTo drives WEST (mv_fwd → R-West) toward a
+//  HIGHER pos, EAST (mv_rev → R-East) toward a LOWER pos. The station's arrival switch is still
+//  #d.ls_at[station]. **Set #d.pos[] per crane** — see the PLC's position-map doc.
+//
+//  COMMANDS (app/Manager writes these):
+//    cmd_send  — arm a batch (rising edge, from IDLE).
+//    cmd_stop  — EMERGENCY HOLD: kills all motion immediately, latches state 100 (STOPPED).
+//                Does NOT clear the recipe. Clear it (and Reset) to move again.
+//    cmd_reset — CLEAN/HOME: lift clear → travel to Parking → wipe the recipe → IDLE.
+//                "As if no recipe was sent, crane back at its home." PLC clears cmd_reset when done.
+//  Extra states: 100 STOPPED · 110 RESET_LIFT · 120 RESET_HOME.
+// ============================================================================
+
+// ---- command overrides (run BEFORE the state machine, highest priority) ----
+IF #d.cmd_stop THEN                       // immediate emergency hold (latched)
+    #d.mv_fwd := FALSE;  #d.mv_rev := FALSE;
+    #d.mv_up  := FALSE;  #d.mv_down := FALSE;
+    #d.sts_busy := FALSE;
+    #state := 100;
+ELSIF #d.cmd_reset AND #state <> 110 AND #state <> 120 THEN   // start homing/clear (if not already)
+    // Wipe the recipe IMMEDIATELY (visible at once), then home the crane.
+    #d.task_count := 0;
+    #d.sts_step   := 0;
+    #d.sts_done   := FALSE;
+    #d.cmd_send   := FALSE;
+    #idx := 0;  #count := 0;
+    #d.sts_busy := TRUE;
+    #state := 110;
+END_IF;
+
+#d.sts_state := #state;
+
+CASE #state OF
+    0:  // IDLE — parked, hoist up, motors off, waiting for a batch.
+        #d.mv_fwd  := FALSE;  #d.mv_rev  := FALSE;
+        #d.mv_up   := FALSE;  #d.mv_down := FALSE;
+        #d.sts_busy := FALSE;
+        #d.sts_step := 0;
+        IF #d.cmd_send AND NOT #prevSend AND #d.task_count > 0 THEN
+            #count := #d.task_count;
+            #idx   := 1;
+            #d.sts_done := FALSE;
+            #d.sts_busy := TRUE;
+            #state := 10;
+        END_IF;
+
+    10: // GO_LOAD — travel to the Loading Area (station 1).
+        #d.sts_busy := TRUE;
+        #target  := 1;
+        #arrived := "TravelTo"(target := #d.pos[#target], cur := #d.pos[#cur],
+                               atTarget := #d.ls_at[#target],
+                               fwd => #d.mv_fwd, rev => #d.mv_rev);
+        IF #arrived THEN
+            #cur := #target;
+            #d.mv_fwd := FALSE; #d.mv_rev := FALSE;
+            #state := 20;
+        END_IF;
+
+    20: // LOWER_LOAD — lower the hoist until the dip limit switch is made.
+        #d.mv_up := FALSE;  #d.mv_down := TRUE;
+        IF #d.ls_dip THEN
+            #d.mv_down := FALSE;
+            #state := 30;
+        END_IF;
+
+    30: // WAIT_BTN — operator loads material, then HOLDS btn_start for 3 s.
+        #tHold(IN := #d.btn_start, PT := T#3S);
+        IF #tHold.Q THEN
+            #state := 40;
+        END_IF;
+
+    40: // LIFT_LOAD — raise the hoist clear before travelling.
+        #d.mv_down := FALSE; #d.mv_up := TRUE;
+        IF #d.ls_up THEN
+            #d.mv_up := FALSE;
+            #state := 50;
+        END_IF;
+
+    50: // GO_TANK — travel to THIS task's tank station (TravelTo reverses if lower).
+        #d.sts_step := #idx;
+        #d.tasks[#idx].status := 1;                  // running
+        #target  := #d.tasks[#idx].station;
+        #arrived := "TravelTo"(target := #d.pos[#target], cur := #d.pos[#cur],
+                               atTarget := #d.ls_at[#target],
+                               fwd => #d.mv_fwd, rev => #d.mv_rev);
+        IF #arrived THEN
+            #cur := #target;
+            #d.mv_fwd := FALSE; #d.mv_rev := FALSE;
+            #state := 60;
+        END_IF;
+
+    60: // LOWER_TANK — dip into the tank until the dip limit switch is made.
+        #d.mv_up := FALSE; #d.mv_down := TRUE;
+        IF #d.ls_dip THEN
+            #d.mv_down := FALSE;
+            #state := 70;
+        END_IF;
+
+    70: // DWELL — hold in the tank for this task's dwell_s seconds.
+        #tDwell(IN := TRUE,
+                PT := DINT_TO_TIME(INT_TO_DINT(#d.tasks[#idx].dwell_s) * 1000));
+        IF #tDwell.Q THEN
+            #tDwell(IN := FALSE, PT := T#0S);        // reset the timer for the next tank
+            #state := 80;
+        END_IF;
+
+    80: // LIFT_TANK — lift out, mark the task done, advance or finish.
+        #d.mv_down := FALSE; #d.mv_up := TRUE;
+        IF #d.ls_up THEN
+            #d.mv_up := FALSE;
+            #d.tasks[#idx].status := 2;              // done
+            IF #idx < #count THEN
+                #idx := #idx + 1;
+                #state := 50;                        // next tank
+            ELSE
+                #state := 85;                        // all tanks done
+            END_IF;
+        END_IF;
+
+    85: // GO_PARK — return home to Parking (station 0).
+        #target  := 0;
+        #arrived := "TravelTo"(target := #d.pos[#target], cur := #d.pos[#cur],
+                               atTarget := #d.ls_at[#target],
+                               fwd => #d.mv_fwd, rev => #d.mv_rev);
+        IF #arrived THEN
+            #cur := #target;
+            #d.mv_fwd := FALSE; #d.mv_rev := FALSE;
+            #state := 90;
+        END_IF;
+
+    90: // DONE — raise the done flag, wait for the app to acknowledge (cmd_send → FALSE).
+        #d.sts_busy := FALSE;
+        #d.sts_done := TRUE;
+        IF NOT #d.cmd_send THEN
+            #d.sts_done := FALSE;
+            #d.sts_step := 0;
+            #state := 0;
+        END_IF;
+
+    100: // STOPPED — emergency hold. Motors off; leaves only via Reset (cmd_reset).
+        #d.mv_fwd := FALSE;  #d.mv_rev := FALSE;
+        #d.mv_up  := FALSE;  #d.mv_down := FALSE;
+        #d.sts_busy := FALSE;
+
+    110: // RESET_LIFT — raise the hoist clear before homing.
+        #d.mv_down := FALSE; #d.mv_up := TRUE;
+        IF #d.ls_up THEN
+            #d.mv_up := FALSE;
+            #state := 120;
+        END_IF;
+
+    120: // RESET_HOME — travel to Parking, then wipe the recipe → IDLE.
+        #target  := 0;
+        #arrived := "TravelTo"(target := #d.pos[#target], cur := #d.pos[#cur],
+                               atTarget := #d.ls_at[#target],
+                               fwd => #d.mv_fwd, rev => #d.mv_rev);
+        IF #arrived THEN
+            #cur := 0;
+            #d.mv_fwd := FALSE; #d.mv_rev := FALSE;
+            #d.task_count := 0;          // "as if no recipe was sent"
+            #d.sts_step   := 0;
+            #d.sts_done   := FALSE;
+            #d.sts_busy   := FALSE;
+            #d.cmd_send   := FALSE;
+            #d.cmd_reset  := FALSE;      // handshake: reset complete
+            #idx := 0;  #count := 0;
+            #state := 0;                 // IDLE
+        END_IF;
+END_CASE;
+
+#prevSend := #d.cmd_send;   // edge memory (runs every scan, after the CASE)
